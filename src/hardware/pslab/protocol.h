@@ -27,9 +27,47 @@
 
 #define LOG_PREFIX "pslab"
 
-struct dev_context {
+#define NUM_CHANNELS		8
+// #define NUM_TRIGGER_STAGES	16
+
+enum pslab_edge_modes {
+    DS_EDGE_RISING,
+    DS_EDGE_FALLING,
 };
 
-SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data);
+struct pslab_profile {
+    uint16_t vid;
+    uint16_t pid;
+
+    const char *vendor;
+    const char *model;
+    const char *model_version;
+
+};
+
+struct dev_context {
+    const struct dslogic_profile *profile;
+
+    const uint64_t *samplerates;
+
+    uint64_t current_samplerate;
+    uint64_t limit_samples;
+
+    unsigned int sent_samples;
+    int submitted_transfers;
+    int empty_transfer_count;
+
+//    unsigned int num_transfers;
+//    struct libusb_transfer **transfers;
+    struct sr_context *ctx;
+
+    int clock_edge;
+    double current_threshold;
+};
+
+SR_PRIV int pslab_dev_open(struct sr_dev_inst *sdi, struct sr_dev_driver *di);
+SR_PRIV struct dev_context *dslogic_dev_new(void);
+SR_PRIV int pslab_acquisition_start(const struct sr_dev_inst *sdi);
+SR_PRIV int pslab_acquisition_stop(struct sr_dev_inst *sdi);
 
 #endif

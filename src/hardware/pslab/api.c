@@ -18,6 +18,7 @@
  */
 
 #include <config.h>
+#include <config.h>
 #include "protocol.h"
 
 static const uint32_t scanopts[] = {
@@ -36,17 +37,11 @@ static const uint32_t devopts[] = {
 
 static struct sr_dev_driver pslab_driver_info;
 
-static const uint8_t GET_VERSION[] = { 0xb, 0x5 };
-
 static const struct pslab_profile supported_device[] = {
         /* V5 */
-        { 0x04D8, 0x00DF, "PSLab", "V5", NULL,
-          "dreamsourcelab-dslogic-fx2.fw",
-          0, "DreamSourceLab", "DSLogic", 256 * 1024 * 1024},
+        { 0x04D8, 0x00DF, "PSLab", "V5", NULL },
         /* V6 */
-        { 0x10C4, 0xEA60, "PSLab", "v6", NULL,
-          "dreamsourcelab-dscope-fx2.fw",
-          0, "DreamSourceLab", "DSCope", 256 * 1024 * 1024},
+        { 0x10C4, 0xEA60, "PSLab", "v6", NULL },
 
         ALL_ZERO
 };
@@ -191,7 +186,7 @@ static int dev_open(struct sr_dev_inst *sdi)
     devc = sdi->priv;
     usb = sdi->conn;
 
-    ret = libusb_claim_interface(usb->devhdl, USB_INTERFACE);
+    ret = libusb_claim_interface(usb->devhdl, 0);
     if (ret != 0) {
         switch (ret) {
             case LIBUSB_ERROR_BUSY:
@@ -210,15 +205,11 @@ static int dev_open(struct sr_dev_inst *sdi)
         return SR_ERR;
     }
 
-    if (devc->cur_samplerate == 0) {
+    if (devc->current_samplerate == 0) {
         /* Samplerate hasn't been set; default to the slowest one. */
-        devc->cur_samplerate = devc->samplerates[0];
+        devc->current_samplerate = devc->samplerates[0];
     }
 
-    if (devc->cur_threshold == 0.0) {
-        devc->cur_threshold = thresholds[1][0];
-        return dslogic_set_voltage_threshold(sdi, devc->cur_threshold);
-    }
 
 	return SR_OK;
 }
