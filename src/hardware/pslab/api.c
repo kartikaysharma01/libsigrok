@@ -24,19 +24,32 @@ static struct sr_dev_driver pslab_driver_info;
 
 static GSList *scan(struct sr_dev_driver *di, GSList *options)
 {
-	struct drv_context *drvc;
-	GSList *devices;
+    GSList *device_paths = sr_serial_find_usb(0x04D8,0x00DF);
 
-	(void)options;
+    struct sr_serial_dev_inst *serial;
+    serial = sr_serial_dev_inst_new(device_paths->data, NULL);
 
-	devices = NULL;
-	drvc = di->context;
-	drvc->instances = NULL;
 
-	/* TODO: scan for devices, either based on a SR_CONF_CONN option
+    struct sr_dev_inst *sdi;
+    sdi = g_new0(struct sr_dev_inst, 1);
+    sdi->status = SR_ST_INACTIVE;
+    sdi->vendor = g_strdup("test");
+    sdi->model = g_strdup("Hello");
+    sdi->inst_type = SR_INST_SERIAL;
+    sdi->conn = serial;
+
+    struct sr_channel *ch = sr_channel_new(sdi,0,SR_CHANNEL_ANALOG,0,"CH1");
+    struct sr_channel_group *cg = g_malloc(sizeof(struct sr_channel_group));;
+
+    cg->channels = g_slist_append(NULL, ch);
+
+    sdi->channel_groups = g_slist_append(sdi->channel_groups, cg);
+
+
+    /* TODO: scan for devices, either based on a SR_CONF_CONN option
 	 * or on a USB scan. */
 
-	return devices;
+	return std_scan_complete(di, g_slist_append(NULL, sdi));
 }
 
 static int dev_open(struct sr_dev_inst *sdi)

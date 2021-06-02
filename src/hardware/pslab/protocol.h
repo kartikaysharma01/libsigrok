@@ -31,5 +31,5 @@ struct dev_context {
 };
 
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data);
-
+SR_PRIV struct dev_context *pslab_dev_new();
 #endif
