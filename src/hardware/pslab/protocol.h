@@ -26,6 +26,7 @@
 #include "libsigrok-internal.h"
 
 #define LOG_PREFIX "pslab"
+#define NUM_ANALOG_CHANNELS 8
 
 struct dev_context {
 };
