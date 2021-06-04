@@ -36,6 +36,7 @@ static struct sr_dev_driver pslab_driver_info;
 
 static GSList *scan(struct sr_dev_driver *di, GSList *options)
 {
+    (void) options;
     GSList *l, *devices;
     // V5
     GSList *device_paths = g_slist_append(sr_serial_find_usb(0x04D8,0x00DF), sr_serial_find_usb(0x10C4,0xEA60));
@@ -57,11 +58,12 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
             sdi->vendor = g_strdup("test");
             sdi->model = g_strdup("V5");
             sdi->version = g_strdup("version"); // send command to device and retrive
-            sdi->connection_id; // make a unique conn id to identify devices -- eg. port_name
+            sdi->connection_id = l->data; // make a unique conn id to identify devices -- eg. port_name
             sdi->conn = serial;
 
             struct sr_channel_group *cg = g_malloc(sizeof(struct sr_channel_group));
             cg->name = g_strdup("Analog");
+            cg->channels = g_slist_alloc();
             for(int i=0; i<NUM_ANALOG_CHANNELS; i++) {
                 struct sr_channel *ch = sr_channel_new(sdi, i, SR_CHANNEL_ANALOG, TRUE, analog_channels[i]);
                 cg->channels = g_slist_append(cg->channels, ch);
