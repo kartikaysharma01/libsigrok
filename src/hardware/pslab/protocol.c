@@ -20,22 +20,25 @@
 #include <config.h>
 #include "protocol.h"
 
-SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
-{
-	const struct sr_dev_inst *sdi;
-	struct dev_context *devc;
+SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data) {
+    const struct sr_dev_inst *sdi;
+    struct dev_context *devc;
 
-	(void)fd;
+    (void) fd;
 
-	if (!(sdi = cb_data))
-		return TRUE;
+    if (!(sdi = cb_data))
+        return TRUE;
 
-	if (!(devc = sdi->priv))
-		return TRUE;
+    if (!(devc = sdi->priv))
+        return TRUE;
 
-	if (revents == G_IO_IN) {
-		/* TODO */
-	}
+    if (revents == G_IO_IN) {
+        /* TODO */
+    }
 
-	return TRUE;
+    return TRUE;
+}
+
+SR_PRIV struct dev_context *pslab_dev_new() {
+
 }
