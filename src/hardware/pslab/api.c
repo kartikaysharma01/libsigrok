@@ -18,137 +18,177 @@
  */
 
 #include <config.h>
+#include <math.h>
 #include "protocol.h"
+
+static const struct analog_channel analog_channels[] = {
+        {"CH1", 3},
+        {"CH2", 0},
+        {"CH3", 1},
+        {"MIC", 2},
+        {"AN4", 4},
+        {"RES", 7},
+        {"CAP", 5},
+        {"VOL", 8},
+};
+
 
 static struct sr_dev_driver pslab_driver_info;
 
-static GSList *scan(struct sr_dev_driver *di, GSList *options)
-{
-	struct drv_context *drvc;
-	GSList *devices;
+static GSList *scan(struct sr_dev_driver *di, GSList *options) {
+    (void) options;
+    GSList *l, *devices;
 
-	(void)options;
+    GSList *device_paths_v5 = sr_serial_find_usb(0x04D8, 0x00DF);
 
-	devices = NULL;
-	drvc = di->context;
-	drvc->instances = NULL;
+    GSList *device_paths_v6 = sr_serial_find_usb(0x10C4, 0xEA60);
 
-	/* TODO: scan for devices, either based on a SR_CONF_CONN option
-	 * or on a USB scan. */
+    GSList *device_paths = g_slist_concat(device_paths_v5, device_paths_v6);
 
-	return devices;
+    devices = NULL;
+    struct sr_serial_dev_inst *serial;
+    struct sr_dev_inst *sdi;
+
+    for (l = device_paths; l; l = l->next) {
+
+        serial = sr_serial_dev_inst_new(l->data, NULL);
+
+        sdi = g_new0(struct sr_dev_inst, 1);
+        sdi->status = SR_ST_INACTIVE;
+        sdi->inst_type = SR_INST_SERIAL;
+        sdi->vendor = g_strdup("PSLab");
+        sdi->connection_id = l->data; // make a unique conn id to identify devices -- eg. port_name
+        sdi->conn = serial;
+
+        struct sr_channel_group *cg = g_new0(struct sr_channel_group, 1);
+        cg->name = g_strdup("Analog");
+        cg->channels = g_slist_alloc();
+        for (int i = 0; i < NUM_ANALOG_CHANNELS; i++) {
+            struct sr_channel *ch = sr_channel_new(sdi, i, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
+            struct channel_priv *cp = g_new0(struct channel_priv, 1);
+            cp->chosa = analog_channels[i].chosa;
+            cp->gain = 1;
+            cp->resolution = pow(2, 10) - 1;
+            if (!g_strcmp0(analog_channels[i].name, "CH1")) {
+                cp->programmable_gain_amplifier = 1;
+            } else if (!g_strcmp0(analog_channels[i].name, "CH2")) {
+                cp->programmable_gain_amplifier = 2;
+            }
+
+            ch->priv = cp;
+            cg->channels = g_slist_append(cg->channels, ch);
+        }
+        sdi->channel_groups = g_slist_append(NULL, cg);
+        devices = g_slist_append(devices, sdi);
+    }
+
+    g_free(device_paths);
+    return std_scan_complete(di, devices);
 }
 
-static int dev_open(struct sr_dev_inst *sdi)
-{
-	(void)sdi;
+static int dev_open(struct sr_dev_inst *sdi) {
+    (void) sdi;
 
-	/* TODO: get handle from sdi->conn and open it. */
+    /* TODO: get handle from sdi->conn and open it. */
 
-	return SR_OK;
+    return SR_OK;
 }
 
-static int dev_close(struct sr_dev_inst *sdi)
-{
-	(void)sdi;
+static int dev_close(struct sr_dev_inst *sdi) {
+    (void) sdi;
 
-	/* TODO: get handle from sdi->conn and close it. */
+    /* TODO: get handle from sdi->conn and close it. */
 
-	return SR_OK;
+    return SR_OK;
 }
 
 static int config_get(uint32_t key, GVariant **data,
-	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
-{
-	int ret;
+                      const struct sr_dev_inst *sdi, const struct sr_channel_group *cg) {
+    int ret;
 
-	(void)sdi;
-	(void)data;
-	(void)cg;
+    (void) sdi;
+    (void) data;
+    (void) cg;
 
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		return SR_ERR_NA;
-	}
+    ret = SR_OK;
+    switch (key) {
+        /* TODO */
+        default:
+            return SR_ERR_NA;
+    }
 
-	return ret;
+    return ret;
 }
 
 static int config_set(uint32_t key, GVariant *data,
-	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
-{
-	int ret;
+                      const struct sr_dev_inst *sdi, const struct sr_channel_group *cg) {
+    int ret;
 
-	(void)sdi;
-	(void)data;
-	(void)cg;
+    (void) sdi;
+    (void) data;
+    (void) cg;
 
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		ret = SR_ERR_NA;
-	}
+    ret = SR_OK;
+    switch (key) {
+        /* TODO */
+        default:
+            ret = SR_ERR_NA;
+    }
 
-	return ret;
+    return ret;
 }
 
 static int config_list(uint32_t key, GVariant **data,
-	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
-{
-	int ret;
+                       const struct sr_dev_inst *sdi, const struct sr_channel_group *cg) {
+    int ret;
 
-	(void)sdi;
-	(void)data;
-	(void)cg;
+    (void) sdi;
+    (void) data;
+    (void) cg;
 
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		return SR_ERR_NA;
-	}
+    ret = SR_OK;
+    switch (key) {
+        /* TODO */
+        default:
+            return SR_ERR_NA;
+    }
 
-	return ret;
+    return ret;
 }
 
-static int dev_acquisition_start(const struct sr_dev_inst *sdi)
-{
-	/* TODO: configure hardware, reset acquisition state, set up
-	 * callbacks and send header packet. */
+static int dev_acquisition_start(const struct sr_dev_inst *sdi) {
+    /* TODO: configure hardware, reset acquisition state, set up
+     * callbacks and send header packet. */
 
-	(void)sdi;
+    (void) sdi;
 
-	return SR_OK;
+    return SR_OK;
 }
 
-static int dev_acquisition_stop(struct sr_dev_inst *sdi)
-{
-	/* TODO: stop acquisition. */
+static int dev_acquisition_stop(struct sr_dev_inst *sdi) {
+    /* TODO: stop acquisition. */
 
-	(void)sdi;
+    (void) sdi;
 
-	return SR_OK;
+    return SR_OK;
 }
 
 static struct sr_dev_driver pslab_driver_info = {
-	.name = "pslab",
-	.longname = "pslab",
-	.api_version = 1,
-	.init = std_init,
-	.cleanup = std_cleanup,
-	.scan = scan,
-	.dev_list = std_dev_list,
-	.dev_clear = std_dev_clear,
-	.config_get = config_get,
-	.config_set = config_set,
-	.config_list = config_list,
-	.dev_open = dev_open,
-	.dev_close = dev_close,
-	.dev_acquisition_start = dev_acquisition_start,
-	.dev_acquisition_stop = dev_acquisition_stop,
-	.context = NULL,
+        .name = "pslab",
+        .longname = "pslab",
+        .api_version = 1,
+        .init = std_init,
+        .cleanup = std_cleanup,
+        .scan = scan,
+        .dev_list = std_dev_list,
+        .dev_clear = std_dev_clear,
+        .config_get = config_get,
+        .config_set = config_set,
+        .config_list = config_list,
+        .dev_open = dev_open,
+        .dev_close = dev_close,
+        .dev_acquisition_start = dev_acquisition_start,
+        .dev_acquisition_stop = dev_acquisition_stop,
+        .context = NULL,
 };
 SR_REGISTER_DEV_DRIVER(pslab_driver_info);
