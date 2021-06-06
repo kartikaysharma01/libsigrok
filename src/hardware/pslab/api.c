@@ -83,7 +83,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options) {
     }
 
     g_free(device_paths_v5);
-    g_free(device_paths);
+    g_free(device_paths_v6);
     return std_scan_complete(di, devices);
 }
 
