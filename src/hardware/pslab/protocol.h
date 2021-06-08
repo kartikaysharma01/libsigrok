@@ -32,24 +32,24 @@ struct dev_context {
 };
 
 struct analog_channel {
-    const char *name;
+	const char *name;
 
-    int chosa;
+	int chosa;
 };
 
 struct channel_priv {
 
-    int samples_in_buffer;
+	int samples_in_buffer;
 
-    int buffer_idx;
+	int buffer_idx;
 
-    int chosa;
+	int chosa;
 
-    int gain;
+	int gain;
 
-    int programmable_gain_amplifier;
+	int programmable_gain_amplifier;
 
-    int resolution;
+	int resolution;
 };
 
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data);
