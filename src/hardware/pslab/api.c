@@ -125,8 +125,8 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 
 static int dev_open(struct sr_dev_inst *sdi)
 {
-	struct sr_serial_dev_inst *serial = sr_serial_dev_inst_new(sdi->connection_id, "1000000/8n1");
-	return serial_open(serial, SERIAL_RDWR);
+//	struct sr_serial_dev_inst *serial = sr_serial_dev_inst_new(sdi->connection_id, "1000000/8n1");
+//	return serial_open(, SERIAL_RDWR);
 }
 
 static int dev_close(struct sr_dev_inst *sdi)
@@ -202,7 +202,7 @@ static struct sr_dev_driver pslab_driver_info = {
 	.config_get = config_get,
 	.config_set = config_set,
 	.config_list = config_list,
-	.dev_open = dev_open,
+	.dev_open = std_serial_dev_open,
 	.dev_close = dev_close,
 	.dev_acquisition_start = dev_acquisition_start,
 	.dev_acquisition_stop = dev_acquisition_stop,
