@@ -110,7 +110,8 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 
 static int dev_open(struct sr_dev_inst *sdi)
 {
-	return serial_open(sdi->conn, SERIAL_RDWR);
+	struct sr_serial_dev_inst *serial = sr_serial_dev_inst_new(sdi->connection_id, NULL);
+	return serial_open(serial, SERIAL_RDWR);
 }
 
 static int dev_close(struct sr_dev_inst *sdi)
