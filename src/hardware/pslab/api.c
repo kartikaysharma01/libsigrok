@@ -52,7 +52,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 
 	for (l = device_paths; l; l = l->next)
 	{
-		serial = sr_serial_dev_inst_new(l->data, NULL);
+		serial = sr_serial_dev_inst_new(l->data, "1000000");
 
 		sdi = g_new0(struct sr_dev_inst, 1);
 		sdi->status = SR_ST_INACTIVE;
@@ -91,20 +91,12 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 
 static int dev_open(struct sr_dev_inst *sdi)
 {
-	(void)sdi;
-
-	/* TODO: get handle from sdi->conn and open it. */
-
-	return SR_OK;
+	return serial_open(sdi->conn, SERIAL_RDWR);
 }
 
 static int dev_close(struct sr_dev_inst *sdi)
 {
-	(void)sdi;
-
-	/* TODO: get handle from sdi->conn and close it. */
-
-	return SR_OK;
+	return serial_close(sdi->conn);
 }
 
 static int config_get(uint32_t key, GVariant **data,
