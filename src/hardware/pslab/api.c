@@ -21,6 +21,25 @@
 #include <math.h>
 #include "protocol.h"
 
+static const uint32_t scanopts[] = {
+		SR_CONF_CONN,
+};
+
+static const uint32_t drvopts[] = {
+		SR_CONF_OSCILLOSCOPE,
+		SR_CONF_MULTIMETER,
+};
+
+static const uint32_t devopts[] = {
+		SR_CONF_CONTINUOUS | SR_CONF_SET,
+		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_SPL_WEIGHT_FREQ | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+		SR_CONF_SPL_WEIGHT_TIME | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+		SR_CONF_SPL_MEASUREMENT_RANGE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+		SR_CONF_POWER_OFF | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_DATA_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+};
+
 static const struct analog_channel analog_channels[] = {
 		{"CH1", 3},
 		{"CH2", 0},
@@ -105,17 +124,9 @@ static int config_get(uint32_t key, GVariant **data,
 	int ret;
 
 	(void)sdi;
-	(void)data;
 	(void)cg;
-
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		return SR_ERR_NA;
-	}
-
-	return ret;
+	*data = g_variant_new_uint64(100000);
+	return SR_OK;
 }
 
 static int config_set(uint32_t key, GVariant *data,
@@ -127,33 +138,21 @@ static int config_set(uint32_t key, GVariant *data,
 	(void)data;
 	(void)cg;
 
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		ret = SR_ERR_NA;
-	}
-
-	return ret;
+	return SR_OK;
 }
 
 static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	int ret;
-
-	(void)sdi;
-	(void)data;
-	(void)cg;
-
-	ret = SR_OK;
 	switch (key) {
-	/* TODO */
-	default:
-		return SR_ERR_NA;
+		case SR_CONF_SCAN_OPTIONS:
+		case SR_CONF_DEVICE_OPTIONS:
+			return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
+		default:
+			return SR_ERR_NA;
 	}
 
-	return ret;
+	return SR_OK;
 }
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
