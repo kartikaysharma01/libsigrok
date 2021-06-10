@@ -71,7 +71,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 
 	for (l = device_paths; l; l = l->next)
 	{
-		serial = sr_serial_dev_inst_new(l->data, "1000000");
+		serial = sr_serial_dev_inst_new(l->data, "1000000/8n1");
 
 		sdi = g_new0(struct sr_dev_inst, 1);
 		sdi->status = SR_ST_INACTIVE;

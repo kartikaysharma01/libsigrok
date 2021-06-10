@@ -95,15 +95,20 @@ SR_PRIV int serial_open(struct sr_serial_dev_inst *serial, int flags)
 	 * variant from the serial port's name. Default to libserialport
 	 * for backwards compatibility.
 	 */
-	if (ser_name_is_hid(serial))
+	if (ser_name_is_hid(serial)) {
+		sr_dbg("ln 99");
 		serial->lib_funcs = ser_lib_funcs_hid;
+	}
 	else if (ser_name_is_bt(serial))
 		serial->lib_funcs = ser_lib_funcs_bt;
-	else
+	else {
+		sr_dbg("ln 105");
 		serial->lib_funcs = ser_lib_funcs_libsp;
-	if (!serial->lib_funcs)
+	}
+	if (!serial->lib_funcs) {
+		sr_dbg("ln 109");
 		return SR_ERR_NA;
-
+	}
 	/*
 	 * Note that use of the 'rcv_buffer' is optional, and the buffer's
 	 * size heavily depends on the specific transport. That's why the
@@ -116,8 +121,10 @@ SR_PRIV int serial_open(struct sr_serial_dev_inst *serial, int flags)
 	 * Run the transport's open routine. Setup the bitrate and the
 	 * UART frame format.
 	 */
-	if (!serial->lib_funcs->open)
+	if (!serial->lib_funcs->open) {
+		sr_dbg("ln 125");
 		return SR_ERR_NA;
+	}
 	ret = serial->lib_funcs->open(serial, flags);
 	if (ret != SR_OK)
 		return ret;
