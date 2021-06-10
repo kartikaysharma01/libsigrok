@@ -105,8 +105,14 @@ SR_PRIV int serial_open(struct sr_serial_dev_inst *serial, int flags)
 		sr_dbg("ln 105");
 		serial->lib_funcs = ser_lib_funcs_libsp;
 	}
-	if (!serial->lib_funcs) {
+	if (ser_lib_funcs_libsp) {
 		sr_dbg("ln 109");
+	} else {
+		sr_dbg("ln 111");
+		sr_dbg();
+	}
+	if (!serial->lib_funcs) {
+		sr_dbg("ln 115");
 		return SR_ERR_NA;
 	}
 	/*
