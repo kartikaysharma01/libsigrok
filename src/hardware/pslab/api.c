@@ -77,19 +77,28 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			continue;
 		}
 
-		sr_dbg("writing 11");
-		int data = 11;
-		serial_write_blocking(serial, "0x11", 4, 1000);
+		//tondaj
+		//      buf[0] = 0x10;
+        //		buf[1] = 0x04;
+        //		buf[2] = 0x0d;
+        uint8_t x = 0x0b;
+        sr_dbg("writing 11 & 5");
+		serial_write_blocking(serial, &x, 1, 1000);
 		sr_dbg("writing 5");
-		data = 5;
-		serial_write_blocking(serial, "0x05", 4, 1000);
+        uint8_t z = 0x05;
+        serial_write_blocking(serial, &z, 1, 1000);
 		sr_dbg("writing done");
 
 		int len = 16;
 		char *buf = g_malloc(len);
 		serial_readline(serial, &buf, &len, 1250);
 		sr_dbg("read len %d",len);
-		sr_dbg("read value %s",buf);
+        sr_dbg("read value %s",buf);
+        sr_dbg("\n");
+		for (unsigned long i =0;i< strlen(buf);i++) {
+            sr_dbg("%lu \n",i);
+            sr_dbg("read value %x",buf[i]);
+        }
 
 
 		sdi = g_new0(struct sr_dev_inst, 1);
