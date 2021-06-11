@@ -136,7 +136,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devices = g_slist_append(devices, sdi);
 	}
 
-//	serial_close(serial);
+	serial_close(serial);
 	return std_scan_complete(di, devices);
 }
 
