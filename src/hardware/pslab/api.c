@@ -22,14 +22,14 @@
 #include "protocol.h"
 
 static const struct analog_channel analog_channels[] = {
-		{"CH1", 3},
-		{"CH2", 0},
-		{"CH3", 1},
-		{"MIC", 2},
-		{"AN4", 4},
-		{"RES", 7},
-		{"CAP", 5},
-		{"VOL", 8},
+		{"CH1", 3,16.5, -16.5},
+		{"CH2", 0,16.5, -16.5},
+		{"CH3", 1,-3.3, 3.3},
+		{"MIC", 2,-3.3,3.3},
+		{"AN4", 4,0, 3.3},
+		{"RES", 7,0, 3.3},
+		{"CAP", 5,0,3.3},
+		{"VOL", 8,0,3.3},
 };
 
 static struct sr_dev_driver pslab_driver_info;

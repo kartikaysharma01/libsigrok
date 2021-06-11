@@ -35,6 +35,10 @@ struct analog_channel {
 	const char *name;
 
 	int chosa;
+
+	float minInput;
+
+	float maxInput;
 };
 
 struct channel_priv {
