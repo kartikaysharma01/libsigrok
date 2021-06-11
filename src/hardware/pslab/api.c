@@ -77,8 +77,10 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		switch (src->key) {
 			case SR_CONF_CONN:
 				path = g_variant_get_string(src->data, NULL);
+				sr_dbg("ln 80,path = %s",path);
 				break;
 			case SR_CONF_SERIALCOMM:
+				sr_dbg("ln 83");
 				serialcomm = g_variant_get_string(src->data, NULL);
 				break;
 		}
@@ -91,9 +93,11 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 
 	for (l = device_paths; l; l = l->next)
 	{
-		if (path && l->data != path) {
+		if (path && path != l->data) {
+			sr_dbg("ln 97");
 			continue;
 		}
+		sr_dbg("ln 100");
 		serial = sr_serial_dev_inst_new(l->data, serialcomm);
 
 		if (serial_open(serial, SERIAL_RDWR) != SR_OK) {
