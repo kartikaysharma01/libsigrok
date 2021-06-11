@@ -68,7 +68,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	struct sr_serial_dev_inst *serial;
 	struct sr_dev_inst *sdi;
 
-	const char *path;
+	const char *path = NULL;
 	const char *serialcomm = "1000000/8n1";
 
 	for (l = options; l; l = l->next)
