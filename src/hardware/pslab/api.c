@@ -84,14 +84,14 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		}
 	}
 
-	if(!path)
-		return NULL;
-	if (!serialcomm)
-		serialcomm = "1000000/8n1";
+//	if(!path)
+//		return NULL;
+//	if (!serialcomm)
+//		serialcomm = "1000000/8n1";
 
 	for (l = device_paths; l; l = l->next)
 	{
-		if (l->data != path) {
+		if (path && l->data != path) {
 			continue;
 		}
 		serial = sr_serial_dev_inst_new(l->data, serialcomm);
@@ -132,7 +132,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devices = g_slist_append(devices, sdi);
 	}
 
-	serial_close(serial);
+//	serial_close(serial);
 	return std_scan_complete(di, devices);
 }
 
