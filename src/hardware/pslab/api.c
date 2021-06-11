@@ -32,13 +32,12 @@ static const struct analog_channel analog_channels[] = {
 		{"VOL", 8},
 };
 
-
 static struct sr_dev_driver pslab_driver_info;
 
 static GSList *scan(struct sr_dev_driver *di, GSList *options)
 {
-	(void) options;
 	GSList *l, *devices;
+	struct sr_config *src;
 
 	GSList *device_paths_v5 = sr_serial_find_usb(0x04D8, 0x00DF);
 
@@ -50,9 +49,32 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	struct sr_serial_dev_inst *serial;
 	struct sr_dev_inst *sdi;
 
+	const char *path = NULL;
+	const char *serialcomm = "1000000/8n1";
+
+	for (l = options; l; l = l->next)
+	{
+		src = l->data;
+		switch (src->key) {
+			case SR_CONF_CONN:
+				path = g_variant_get_string(src->data, NULL);
+				break;
+			case SR_CONF_SERIALCOMM:
+				serialcomm = g_variant_get_string(src->data, NULL);
+				break;
+		}
+	}
+
 	for (l = device_paths; l; l = l->next)
 	{
-		serial = sr_serial_dev_inst_new(l->data, NULL);
+		if (path && path != l->data) {
+			continue;
+		}
+		serial = sr_serial_dev_inst_new(l->data, serialcomm);
+
+		if (serial_open(serial, SERIAL_RDWR) != SR_OK) {
+			continue;
+		}
 
 		sdi = g_new0(struct sr_dev_inst, 1);
 		sdi->status = SR_ST_INACTIVE;
@@ -85,6 +107,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		}
 		sdi->channel_groups = g_slist_append(NULL, cg);
 		devices = g_slist_append(devices, sdi);
+		serial_close(serial);
 	}
 	return std_scan_complete(di, devices);
 }
