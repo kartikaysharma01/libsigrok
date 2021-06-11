@@ -51,7 +51,6 @@ static const struct analog_channel analog_channels[] = {
 		{"VOL", 8},
 };
 
-
 static struct sr_dev_driver pslab_driver_info;
 
 static GSList *scan(struct sr_dev_driver *di, GSList *options)
@@ -72,22 +71,34 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	const char *path;
 	const char *serialcomm = "1000000/8n1";
 
-	for (l = options; l; l = l->next) {
+	for (l = options; l; l = l->next)
+	{
 		src = l->data;
 		switch (src->key) {
 			case SR_CONF_CONN:
 				path = g_variant_get_string(src->data, NULL);
-				device_paths = g_slist_append(NULL, path);
 				break;
 			case SR_CONF_SERIALCOMM:
 				serialcomm = g_variant_get_string(src->data, NULL);
 				break;
 		}
 	}
+
+	if(!path)
+		return NULL;
+	if (!serialcomm)
+		serialcomm = "1000000/8n1";
+
 	for (l = device_paths; l; l = l->next)
 	{
+		if (l->data != path) {
+			continue;
+		}
 		serial = sr_serial_dev_inst_new(l->data, serialcomm);
 
+		if (serial_open(serial, SERIAL_RDWR) != SR_OK) {
+			continue;
+		}
 		sdi = g_new0(struct sr_dev_inst, 1);
 		sdi->status = SR_ST_INACTIVE;
 		sdi->inst_type = SR_INST_SERIAL;
@@ -120,18 +131,9 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->channel_groups = g_slist_append(NULL, cg);
 		devices = g_slist_append(devices, sdi);
 	}
+
+	serial_close(serial);
 	return std_scan_complete(di, devices);
-}
-
-static int dev_open(struct sr_dev_inst *sdi)
-{
-//	struct sr_serial_dev_inst *serial = sr_serial_dev_inst_new(sdi->connection_id, "1000000/8n1");
-//	return serial_open(, SERIAL_RDWR);
-}
-
-static int dev_close(struct sr_dev_inst *sdi)
-{
-	return serial_close(sdi->conn);
 }
 
 static int config_get(uint32_t key, GVariant **data,
@@ -203,7 +205,7 @@ static struct sr_dev_driver pslab_driver_info = {
 	.config_set = config_set,
 	.config_list = config_list,
 	.dev_open = std_serial_dev_open,
-	.dev_close = dev_close,
+	.dev_close = std_serial_dev_close,
 	.dev_acquisition_start = dev_acquisition_start,
 	.dev_acquisition_stop = dev_acquisition_stop,
 	.context = NULL,
