@@ -127,9 +127,11 @@ static int config_get(uint32_t key, GVariant **data,
 {
 	int ret;
 
-	(void)sdi;
 	(void)data;
 	(void)cg;
+
+	if (!sdi)
+		return SR_ERR_ARG;
 
 	ret = SR_OK;
 	switch (key) {

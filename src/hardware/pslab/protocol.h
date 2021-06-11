@@ -51,6 +51,8 @@
 #define SET_LO_CAPTURE 0x10
 
 struct dev_context {
+	/* Acquisition settings */
+	int samples; // no of samples to collect
 };
 
 struct analog_channel {
