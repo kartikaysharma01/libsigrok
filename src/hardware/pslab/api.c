@@ -79,10 +79,10 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 
 		sr_dbg("writing 11");
 		int data = 11;
-		serial_write_blocking(serial, &data, 2, 1000);
+		serial_write_blocking(serial, &data, sizeof data, 1000);
 		sr_dbg("writing 5");
 		data = 5;
-		serial_write_blocking(serial, &data, 1, 1000);
+		serial_write_blocking(serial, &data, sizeof data, 1000);
 		sr_dbg("writing done");
 
 		int len = 16;
