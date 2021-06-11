@@ -73,8 +73,22 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		serial = sr_serial_dev_inst_new(l->data, serialcomm);
 
 		if (serial_open(serial, SERIAL_RDWR) != SR_OK) {
+			serial_close(serial);
 			continue;
 		}
+
+		sr_dbg("writing 11");
+		serial_write_blocking(serial, "11", 2, 1000);
+		sr_dbg("writing 5");
+		serial_write_blocking(serial, "5", 1, 1000);
+		sr_dbg("writing done");
+
+		int len = 16;
+		char *buf = g_malloc(len);
+		serial_readline(serial, &buf, &len, 1250);
+		sr_dbg("read len %d",len);
+		sr_dbg("read value %s",buf);
+
 
 		sdi = g_new0(struct sr_dev_inst, 1);
 		sdi->status = SR_ST_INACTIVE;
