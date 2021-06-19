@@ -53,6 +53,8 @@
 struct dev_context {
 	/* Acquisition settings */
 	int samples; // no of samples to collect
+	int timegap; // Time gap between samples in microseconds
+	gboolean data_source;
 };
 
 struct analog_channel {

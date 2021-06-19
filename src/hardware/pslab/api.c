@@ -21,6 +21,26 @@
 #include <math.h>
 #include "protocol.h"
 
+static const uint32_t scanopts[] = {
+		SR_CONF_CONN,
+		SR_CONF_SERIALCOMM,
+};
+
+static const uint32_t drvopts[] = {
+		SR_CONF_OSCILLOSCOPE,
+};
+
+static const uint32_t devopts[] = {
+		SR_CONF_LIMIT_FRAMES | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_SAMPLE_INTERVAL | SR_CONF_GET | SR_CONF_SET,
+//		SR_CONF_CHANNEL_CONFIG | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+//		SR_CONF_HORIZ_TRIGGERPOS | SR_CONF_SET,
+//		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+//		SR_CONF_TRIGGER_SLOPE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+//		SR_CONF_TRIGGER_LEVEL | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_DATA_SOURCE | SR_CONF_GET | SR_CONF_SET,
+};
+
 static const struct analog_channel analog_channels[] = {
 		{"CH1", 3,16.5, -16.5},
 		{"CH2", 0,16.5, -16.5},
@@ -48,6 +68,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	devices = NULL;
 	struct sr_serial_dev_inst *serial;
 	struct sr_dev_inst *sdi;
+	struct dev_context *devc;
 
 	const char *path = NULL;
 	const char *serialcomm = "1000000/8n1";
@@ -116,6 +137,9 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			cg->channels = g_slist_append(cg->channels, ch);
 		}
 		sdi->channel_groups = g_slist_append(NULL, cg);
+		devc = g_malloc0(sizeof(struct dev_context));
+		devc->samples=0;
+		sdi->priv = devc;
 		devices = g_slist_append(devices, sdi);
 		serial_close(serial);
 	}
@@ -125,19 +149,33 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 static int config_get(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
+	struct dev_context *devc;
 	int ret;
 
-	(void)data;
 	(void)cg;
 
 	if (!sdi)
 		return SR_ERR_ARG;
 
+	devc = sdi->priv;
+
+
 	ret = SR_OK;
 	switch (key) {
-	/* TODO */
-	default:
-		return SR_ERR_NA;
+		case SR_CONF_LIMIT_FRAMES:
+			*data = g_variant_new_uint16(devc->samples);
+			break;
+		case SR_CONF_SAMPLE_INTERVAL:
+			*data = g_variant_new_uint16(devc->timegap);
+			break;
+		case SR_CONF_DATA_SOURCE:
+			if (devc->data_source)
+				*data = g_variant_new_string("Live");
+			else
+				*data = g_variant_new_string("Memory");
+			break;
+		default:
+			return SR_ERR_NA;
 	}
 
 	return ret;
@@ -146,39 +184,39 @@ static int config_get(uint32_t key, GVariant **data,
 static int config_set(uint32_t key, GVariant *data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	int ret;
+	struct dev_context *devc;
 
-	(void)sdi;
-	(void)data;
 	(void)cg;
 
-	ret = SR_OK;
+	devc = sdi->priv;
 	switch (key) {
-	/* TODO */
+	case SR_CONF_LIMIT_SAMPLES:
+		devc->samples = g_variant_get_uint16(data);
+		break;
+	case SR_CONF_SAMPLE_INTERVAL:
+		devc->timegap = g_variant_get_uint16(data);
+		break;
+	case SR_CONF_DATA_SOURCE:
+		devc->data_source = g_variant_get_boolean(data);
+		break;
 	default:
-		ret = SR_ERR_NA;
+		return SR_ERR_NA;
 	}
 
-	return ret;
+	return SR_OK;
 }
 
 static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	int ret;
-
-	(void)sdi;
-	(void)data;
-	(void)cg;
-
-	ret = SR_OK;
 	switch (key) {
-	/* TODO */
+	case SR_CONF_DEVICE_OPTIONS:
+		return STD_CONFIG_LIST(key, data, sdi, cg, NO_OPTS, drvopts, devopts);
 	default:
 		return SR_ERR_NA;
 	}
 
-	return ret;
+	return SR_OK;
 }
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
