@@ -52,8 +52,8 @@
 
 struct dev_context {
 	/* Acquisition settings */
-	int samples; // no of samples to collect
-	int timegap; // Time gap between samples in microseconds
+	uint64_t samples; // no of samples to collect
+	uint64_t timegap; // Time gap between samples in microseconds
 	gboolean data_source;
 };
 

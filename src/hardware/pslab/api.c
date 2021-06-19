@@ -116,7 +116,6 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 
 		struct sr_channel_group *cg = g_new0(struct sr_channel_group, 1);
 		cg->name = g_strdup("Analog");
-		cg->channels = g_slist_alloc();
 		for (int i = 0; i < NUM_ANALOG_CHANNELS; i++)
 		{
 			struct sr_channel *ch = sr_channel_new(sdi, i, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
@@ -163,10 +162,10 @@ static int config_get(uint32_t key, GVariant **data,
 	ret = SR_OK;
 	switch (key) {
 		case SR_CONF_LIMIT_FRAMES:
-			*data = g_variant_new_uint16(devc->samples);
+			*data = g_variant_new_uint64(devc->samples);
 			break;
 		case SR_CONF_SAMPLE_INTERVAL:
-			*data = g_variant_new_uint16(devc->timegap);
+			*data = g_variant_new_uint64(devc->timegap);
 			break;
 		case SR_CONF_DATA_SOURCE:
 			if (devc->data_source)
@@ -191,10 +190,10 @@ static int config_set(uint32_t key, GVariant *data,
 	devc = sdi->priv;
 	switch (key) {
 	case SR_CONF_LIMIT_SAMPLES:
-		devc->samples = g_variant_get_uint16(data);
+		devc->samples = g_variant_get_uint64(data);
 		break;
 	case SR_CONF_SAMPLE_INTERVAL:
-		devc->timegap = g_variant_get_uint16(data);
+		devc->timegap = g_variant_get_uint64(data);
 		break;
 	case SR_CONF_DATA_SOURCE:
 		devc->data_source = g_variant_get_boolean(data);
