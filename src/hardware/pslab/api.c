@@ -210,7 +210,7 @@ static int config_list(uint32_t key, GVariant **data,
 {
 	switch (key) {
 	case SR_CONF_DEVICE_OPTIONS:
-		return STD_CONFIG_LIST(key, data, sdi, cg, NO_OPTS, drvopts, devopts);
+		return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
 	default:
 		return SR_ERR_NA;
 	}
