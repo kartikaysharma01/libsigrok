@@ -50,6 +50,8 @@
 #define SET_HI_CAPTURE 0x0f
 #define SET_LO_CAPTURE 0x10
 
+#define RETRIEVE_BUFFER 0x08
+
 struct dev_context {
 	/* Acquisition settings */
 	uint64_t timegap; // Time gap between samples in microseconds

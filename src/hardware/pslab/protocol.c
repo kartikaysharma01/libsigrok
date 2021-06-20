@@ -26,26 +26,28 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	struct dev_context *devc;
 	struct sr_serial_dev_inst *serial;
 	gboolean stop = FALSE;
-	int len;
+	int len = 12;
 
 	(void)fd;
 
 	if (!(sdi = cb_data))
 		return TRUE;
 
-	if (!(devc = sdi->priv))
-		return TRUE;
 
 	serial = sdi->conn;
 	if (revents == G_IO_IN) {
+		printf("line 39\n");
 		/* Serial data arrived. */
-		while (BUFSIZE - devc->buflen - 1 > 0) {
-			len = serial_read_nonblocking(serial, devc->buf + devc->buflen, 1);
-			if (len < 1)
-				break;
-			devc->buflen += len;
-			*(devc->buf + devc->buflen) = '\0';
-			if (*(devc->buf + devc->buflen - 1) == '\n') {
+		while (BUFSIZE  > 0) {
+			int buflen = 10000;
+			short int * buf = g_malloc0(10000);
+			serial_read_blocking(serial, buf, 20, 1000);
+			printf("outpiut %d \n",*buf);
+	printf("line 42\n");
+			buflen += len;
+			*(buf + buflen) = '\0';
+			if (*(buf + buflen - 1) == '\n') {
+				printf("line 51\n");
 				/* End of line */
 //				stop = receive_line(sdi);
 				break;
@@ -97,6 +99,34 @@ SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi)
 	struct dev_context *devc = sdi->priv;
 	struct sr_serial_dev_inst *serial = sdi->conn;
 	devc -> enabled_channels;
+	uint8_t *commands;
+	commands = g_malloc0(sizeof(uint8_t));
+	*commands = ADC;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	*commands = CAPTURE_DMASPEED;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	*commands = CAPTURE_DMASPEED;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	short int samplecount = 10;
+	short int timegap = 8;
+	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
+	serial_write_blocking(serial,&timegap, sizeof (timegap), serial_timeout(serial, sizeof (timegap)));
+
+	char *buf = g_malloc0(1);
+	serial_read_blocking(serial,buf,1,100);
+	printf("ack byte %s\n",buf);
+	uint8_t x = *buf;
+	printf("test %d\n", x & 0x01);
+
+
+	*commands = COMMON;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	*commands = RETRIEVE_BUFFER;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	short int startingposition = 0;
+	serial_write_blocking(serial,&startingposition, sizeof (startingposition), serial_timeout(serial, sizeof (startingposition)));
+	samplecount = 10;
+	serial_write_blocking(serial,&startingposition, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
 	return SR_OK;
 }
 
