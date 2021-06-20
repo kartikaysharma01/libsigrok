@@ -31,7 +31,7 @@ static const uint32_t drvopts[] = {
 };
 
 static const uint32_t devopts[] = {
-		SR_CONF_LIMIT_FRAMES | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET,
 		SR_CONF_SAMPLE_INTERVAL | SR_CONF_GET | SR_CONF_SET,
 //		SR_CONF_CHANNEL_CONFIG | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 //		SR_CONF_HORIZ_TRIGGERPOS | SR_CONF_SET,
@@ -137,7 +137,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		}
 		sdi->channel_groups = g_slist_append(NULL, cg);
 		devc = g_malloc0(sizeof(struct dev_context));
-		devc->samples=0;
+		sr_sw_limits_init(&devc->limits);
 		sdi->priv = devc;
 		devices = g_slist_append(devices, sdi);
 		serial_close(serial);
@@ -161,8 +161,8 @@ static int config_get(uint32_t key, GVariant **data,
 
 	ret = SR_OK;
 	switch (key) {
-		case SR_CONF_LIMIT_FRAMES:
-			*data = g_variant_new_uint64(devc->samples);
+		case SR_CONF_LIMIT_SAMPLES:
+			*data = g_variant_new_uint64(devc->limits.limit_samples);
 			break;
 		case SR_CONF_SAMPLE_INTERVAL:
 			*data = g_variant_new_uint64(devc->timegap);
@@ -190,7 +190,7 @@ static int config_set(uint32_t key, GVariant *data,
 	devc = sdi->priv;
 	switch (key) {
 	case SR_CONF_LIMIT_SAMPLES:
-		devc->samples = g_variant_get_uint64(data);
+		devc->limits.limit_samples = g_variant_get_uint64(data);
 		break;
 	case SR_CONF_SAMPLE_INTERVAL:
 		devc->timegap = g_variant_get_uint64(data);
@@ -209,21 +209,52 @@ static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	switch (key) {
-	case SR_CONF_DEVICE_OPTIONS:
-		return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
-	default:
-		return SR_ERR_NA;
+		case SR_CONF_DEVICE_OPTIONS:
+		case SR_CONF_SCAN_OPTIONS:
+			return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
+		default:
+			return SR_ERR_NA;
 	}
 
 	return SR_OK;
 }
 
+static int configure_channels(const struct sr_dev_inst *sdi)
+{
+	struct dev_context *devc = sdi->priv;
+	const GSList *l;
+	int p;
+	struct sr_channel *ch;
+
+	g_slist_free(devc->enabled_channels);
+	devc->enabled_channels = NULL;
+	memset(devc->ch_enabled, 0, sizeof(devc->ch_enabled));
+
+	for (l = sdi->channels, p = 0; l; l = l->next, p++) {
+		ch = l->data;
+		if (p < NUM_ANALOG_CHANNELS) {
+			devc->ch_enabled[p] = ch->enabled;
+			devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);
+		}
+	}
+	return SR_OK;
+}
+
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 {
-	/* TODO: configure hardware, reset acquisition state, set up
-	 * callbacks and send header packet. */
+	struct dev_context *devc = sdi->priv;
+	struct sr_serial_dev_inst *serial;
+	configure_channels(sdi);
 
-	(void)sdi;
+	if (pslab_init(sdi) != SR_OK)
+		return SR_ERR;
+
+	sr_sw_limits_acquisition_start(&devc->limits);
+	std_session_send_df_header(sdi);
+
+	serial = sdi->conn;
+	serial_source_add(sdi->session, serial, G_IO_IN, 10,
+					  pslab_receive_data, (void *)sdi);
 
 	return SR_OK;
 }

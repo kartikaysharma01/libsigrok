@@ -52,9 +52,13 @@
 
 struct dev_context {
 	/* Acquisition settings */
-	uint64_t samples; // no of samples to collect
 	uint64_t timegap; // Time gap between samples in microseconds
 	gboolean data_source;
+	GSList * enabled_channels;
+	gboolean ch_enabled[NUM_ANALOG_CHANNELS];
+	struct sr_sw_limits limits;
+	unsigned char buf[BUFSIZE];
+	int buflen;
 };
 
 struct analog_channel {
@@ -84,6 +88,12 @@ struct channel_priv {
 
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data);
 SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial, uint8_t c1, uint8_t c2);
+
+SR_PRIV int pslab_update_coupling(const struct sr_dev_inst *sdi);
+SR_PRIV int pslab_update_samplerate(const struct sr_dev_inst *sdi);
+SR_PRIV int pslab_update_vdiv(const struct sr_dev_inst *sdi);
+SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi);
+SR_PRIV int pslab_init(const struct sr_dev_inst *sdi);
 
 SR_PRIV struct dev_context *pslab_dev_new();
 
