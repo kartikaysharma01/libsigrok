@@ -259,7 +259,7 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	std_session_send_df_header(sdi);
 
 	serial = sdi->conn;
-	g_usleep(10000000);
+	g_usleep(5000000);
 	pslab_update_channels(sdi);
 
 	serial_source_add(sdi->session, serial, G_IO_IN, 10,
