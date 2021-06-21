@@ -75,7 +75,7 @@ struct analog_channel {
 
 struct channel_priv {
 
-	int samples_in_buffer;
+	uint64_t samples_in_buffer;
 
 	int buffer_idx;
 
@@ -85,7 +85,7 @@ struct channel_priv {
 
 	int programmable_gain_amplifier;
 
-	int resolution;
+	double resolution;
 };
 
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data);

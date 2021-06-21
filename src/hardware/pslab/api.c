@@ -232,6 +232,12 @@ static int configure_channels(const struct sr_dev_inst *sdi)
 
 	for (l = sdi->channels, p = 0; l; l = l->next, p++) {
 		ch = l->data;
+		if (!g_strcmp0(ch->name, "CH1"))  {
+			struct channel_priv *cp = ch->priv;
+			cp->resolution = 10;
+			cp->samples_in_buffer = devc->limits.limit_samples;
+			cp->buffer_idx = 0;
+		}
 		if (p < NUM_ANALOG_CHANNELS) {
 			devc->ch_enabled[p] = ch->enabled;
 			devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);

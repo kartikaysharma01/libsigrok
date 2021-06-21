@@ -26,13 +26,14 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	struct dev_context *devc;
 	struct sr_serial_dev_inst *serial;
 	gboolean stop = FALSE;
-	int len = 12;
+	int len = 10;
 
 	(void)fd;
 
 	if (!(sdi = cb_data))
 		return TRUE;
 
+	pslab_update_channels(sdi);
 
 	serial = sdi->conn;
 	if (revents == G_IO_IN) {
@@ -98,17 +99,17 @@ SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi)
 {
 	struct dev_context *devc = sdi->priv;
 	struct sr_serial_dev_inst *serial = sdi->conn;
-	devc -> enabled_channels;
+
 	uint8_t *commands;
 	commands = g_malloc0(sizeof(uint8_t));
 	*commands = ADC;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	*commands = CAPTURE_DMASPEED;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	*commands = CAPTURE_DMASPEED;
+	*commands = 3 & 0xff;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	short int samplecount = 10;
-	short int timegap = 8;
+	short int samplecount = 1000;
+	short int timegap = 4;
 	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
 	serial_write_blocking(serial,&timegap, sizeof (timegap), serial_timeout(serial, sizeof (timegap)));
 
@@ -118,6 +119,7 @@ SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi)
 	uint8_t x = *buf;
 	printf("test %d\n", x & 0x01);
 
+	g_usleep(4000);
 
 	*commands = COMMON;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
@@ -125,8 +127,7 @@ SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi)
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	short int startingposition = 0;
 	serial_write_blocking(serial,&startingposition, sizeof (startingposition), serial_timeout(serial, sizeof (startingposition)));
-	samplecount = 10;
-	serial_write_blocking(serial,&startingposition, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
+	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
 	return SR_OK;
 }
 
@@ -137,7 +138,7 @@ SR_PRIV int pslab_init(const struct sr_dev_inst *sdi)
 	pslab_update_samplerate(sdi);
 	pslab_update_vdiv(sdi);
 	pslab_update_coupling(sdi);
-	pslab_update_channels(sdi);
+//	pslab_update_channels(sdi);
 	// hantek_6xxx_update_channels(sdi); /* Only 2 channel mode supported. */
 
 	return SR_OK;
