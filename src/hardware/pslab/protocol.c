@@ -33,27 +33,15 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	if (!(sdi = cb_data))
 		return TRUE;
 
-	pslab_update_channels(sdi);
 
 	serial = sdi->conn;
 	if (revents == G_IO_IN) {
-		printf("line 39\n");
 		/* Serial data arrived. */
-		while (BUFSIZE  > 0) {
-			int buflen = 10000;
-			short int * buf = g_malloc0(10000);
-			serial_read_blocking(serial, buf, 20, 1000);
-			printf("outpiut %d \n",*buf);
-	printf("line 42\n");
-			buflen += len;
-			*(buf + buflen) = '\0';
-			if (*(buf + buflen - 1) == '\n') {
-				printf("line 51\n");
-				/* End of line */
-//				stop = receive_line(sdi);
-				break;
-			}
-		}
+		short int * buf = g_malloc0(2);
+		serial_read_nonblocking(serial,buf,2);
+		printf("outpiut %d \n",*buf);
+		printf("line 42\n");
+
 	}
 
 //	if (sr_sw_limits_check(&devc->limits) || stop)
