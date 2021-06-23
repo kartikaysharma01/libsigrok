@@ -20,6 +20,10 @@
 #include <config.h>
 #include "protocol.h"
 
+//GAIN_VALUES = (1, 2, 4, 5, 8, 10, 16, 32
+int GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
+
+
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 {
 	const struct sr_dev_inst *sdi;
@@ -83,6 +87,104 @@ SR_PRIV int pslab_update_vdiv(const struct sr_dev_inst *sdi)
 	return SR_OK;
 }
 
+SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
+{
+	struct dev_context *devc = sdi->priv;
+	struct sr_serial_dev_inst *serial = sdi->conn;
+	int i;
+	GSList *l;
+
+	struct channel_priv *cp = devc->channel_one_map.priv;
+	cp->resolution =10;
+	int chosa = cp->chosa;
+	cp->samples_in_buffer = devc->limits.limit_samples;
+	cp->buffer_idx = 0;
+
+	uint8_t *commands;
+	commands = g_malloc0(sizeof(uint8_t));
+	*commands = ADC;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+
+	if(g_slist_length(devc->enabled_channels) == 1)
+	{
+		if(devc->trigger_enabled)
+		{
+			*commands = CAPTURE_ONE;
+			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+			*commands = chosa | 0x80;
+			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+
+		}
+		if(devc->timegap >= 1)
+		{
+			cp->resolution = 12;
+			*commands = CAPTURE_DMASPEED;
+			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+			*commands = chosa | 0x80;
+			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+		}
+		else
+		{
+			*commands = CAPTURE_DMASPEED;
+			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+			*commands = chosa;
+			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+		}
+	}
+	else if(g_slist_length(devc->enabled_channels) == 2)
+	{
+		for(l=devc->enabled_channels; l; l=l->next)
+		{
+			struct sr_channel *ch = l->data;
+			if(!g_strcmp0(ch->name, "CH2"))
+			{
+				struct channel_priv *cp2 = ch->priv;
+				cp2->resolution = 10;
+				cp2->samples_in_buffer = devc->limits.limit_samples;
+				cp2->buffer_idx = 1 * devc->limits.limit_samples;
+				break;
+			}
+		}
+		*commands = CAPTURE_TWO;
+		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+		*commands = chosa | (0x80 * devc->trigger_enabled);
+		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	}
+	else
+	{
+		for(i=0, l=devc->enabled_channels; l; l=l->next,i++)
+		{
+			struct sr_channel *ch = l->data;
+			if(g_strcmp0(ch->name, "CH1"))
+			{
+				struct channel_priv *cp2 = ch->priv;
+				cp2->resolution = 10;
+				cp2->samples_in_buffer = devc->limits.limit_samples;
+				cp2->buffer_idx = (i+1) * devc->limits.limit_samples;
+			}
+		}
+		*commands = CAPTURE_FOUR;
+		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+		*commands = chosa | (0 << 4) | (0x80 * devc->trigger_enabled);
+		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	}
+
+	short int samplecount = devc->limits.limit_samples;
+	short int timegap = devc->timegap;
+	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
+	serial_write_blocking(serial,&timegap, sizeof (timegap), serial_timeout(serial, sizeof (timegap)));
+	get_ack(sdi);
+
+	// test
+	g_usleep(devc->timegap * devc->limits.limit_samples);
+
+	fetch_data(sdi);
+}
+
+SR_PRIV void fetch_data(const struct sr_dev_inst *sdi)
+{
+
+}
 SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi)
 {
 	struct dev_context *devc = sdi->priv;
@@ -130,4 +232,75 @@ SR_PRIV int pslab_init(const struct sr_dev_inst *sdi)
 	// hantek_6xxx_update_channels(sdi); /* Only 2 channel mode supported. */
 
 	return SR_OK;
+}
+
+SR_PRIV double lookup_minimum_timegap(guint channels)
+{
+	int channels_idx[3][2] = {{1, 0},{2, 1},{4, 2}};
+	double min_timegaps[3][2] = {{0.5, 0.75}, {0.875, 0.875}, {1.75, 1.75}};
+	/* TODO: revisit the formulae, not correct rn */
+	return min_timegaps[channels_idx[channels-1][1]][0];
+}
+
+SR_PRIV int check_args(guint channels,uint64_t samples ,double timegap)
+{
+	if(channels > 4)
+	{
+		sr_dbg("Number of channels to sample must be 1, 2, 3, or 4");
+		return SR_ERR_IO;
+	}
+
+	if(samples || samples > (MAX_SAMPLES/channels))
+	{
+		sr_dbg("Invalid number of samples");
+		return SR_ERR_IO;
+	}
+
+	if(timegap < lookup_minimum_timegap(channels))
+	{
+		sr_dbg("TImegap must be atleast %f", lookup_minimum_timegap(channels));
+		return SR_ERR_IO;
+	}
+
+	return SR_OK;
+}
+
+/* TODO find replacement */
+SR_PRIV static int find_gain_idx(int gain)
+{
+	for(int i=0; i<(int)sizeof(GAIN_VALUES); i++) {
+		if(GAIN_VALUES[i] == gain)
+			return i;
+	}
+	return -1;
+}
+
+SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain)
+{
+	struct sr_serial_dev_inst *serial = sdi->conn;
+	struct channel_priv *cp = ch->priv;
+	cp->gain = gain;
+	int pga = cp->programmable_gain_amplifier;
+	int gain_idx = find_gain_idx(gain);
+	uint8_t *commands = g_malloc0(sizeof(uint8_t));
+	*commands = ADC;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	*commands = SET_PGA_GAIN;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	*commands = pga;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	*commands = gain_idx;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+
+	get_ack(sdi);
+}
+
+SR_PRIV void get_ack(const struct sr_dev_inst *sdi)
+{
+	struct sr_serial_dev_inst *serial = sdi->conn;
+	int *buf = g_malloc0(1);
+	serial_read_blocking(serial,buf,1, serial_timeout(serial,1));
+
+	if(!(*buf & 0x01))
+		sr_dbg("Received non ACK byte while waiting for ACK.");
 }

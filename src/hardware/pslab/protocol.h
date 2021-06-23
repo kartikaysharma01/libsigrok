@@ -29,6 +29,7 @@
 #define NUM_ANALOG_CHANNELS 8
 
 #define BUFSIZE 10000
+#define MAX_SAMPLES 10000
 #define COMMON 0x0b
 #define VERSION_COMMAND 0x05
 
@@ -53,18 +54,24 @@
 #define RETRIEVE_BUFFER 0x08
 
 struct dev_context {
+	/* device mode */
+	int mode;
 	/* Acquisition settings */
-	uint64_t timegap; // Time gap between samples in microseconds
+	double timegap; // Time gap between samples in microseconds
 	gboolean data_source;
 	GSList * enabled_channels;
+	struct sr_channel channel_one_map;
 	gboolean ch_enabled[NUM_ANALOG_CHANNELS];
 	struct sr_sw_limits limits;
 	unsigned char buf[BUFSIZE];
 	int buflen;
+	gboolean trigger_enabled;
 };
 
 struct analog_channel {
 	const char *name;
+
+	int index;
 
 	int chosa;
 
@@ -96,6 +103,13 @@ SR_PRIV int pslab_update_samplerate(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_update_vdiv(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_init(const struct sr_dev_inst *sdi);
+SR_PRIV int check_args(guint channels,uint64_t samples ,double timegap);
+SR_PRIV double lookup_minimum_timegap(guint channels);
+SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain);
+SR_PRIV int gain_idx(int gain);
+SR_PRIV void get_ack(const struct sr_dev_inst *sdi);
+SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi);
+SR_PRIV void fetch_data(const struct sr_dev_inst *sdi);
 
 SR_PRIV struct dev_context *pslab_dev_new();
 

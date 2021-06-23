@@ -33,6 +33,7 @@ static const uint32_t drvopts[] = {
 static const uint32_t devopts[] = {
 		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET,
 		SR_CONF_SAMPLE_INTERVAL | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_ENABLED | SR_CONF_SET,
 //		SR_CONF_CHANNEL_CONFIG | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 //		SR_CONF_HORIZ_TRIGGERPOS | SR_CONF_SET,
 //		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
@@ -42,14 +43,14 @@ static const uint32_t devopts[] = {
 };
 
 static const struct analog_channel analog_channels[] = {
-		{"CH1", 3,16.5, -16.5},
-		{"CH2", 0,16.5, -16.5},
-		{"CH3", 1,-3.3, 3.3},
-		{"MIC", 2,-3.3,3.3},
-		{"AN4", 4,0, 3.3},
-		{"RES", 7,0, 3.3},
-		{"CAP", 5,0,3.3},
-		{"VOL", 8,0,3.3},
+		{"CH1", 0,3,16.5, -16.5},
+		{"CH2", 1,0,16.5, -16.5},
+		{"CH3", 2,1,-3.3, 3.3},
+		{"MIC", 3,2,-3.3,3.3},
+		{"AN4", 4,4,0, 3.3},
+		{"RES", 5,7,0, 3.3},
+		{"CAP", 6,5,0,3.3},
+		{"VOL", 7,8,0,3.3},
 };
 
 static struct sr_dev_driver pslab_driver_info;
@@ -118,7 +119,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		cg->name = g_strdup("Analog");
 		for (int i = 0; i < NUM_ANALOG_CHANNELS; i++)
 		{
-			struct sr_channel *ch = sr_channel_new(sdi, i, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
+			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
 			struct channel_priv *cp = g_new0(struct channel_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
 			cp->gain = 1;
@@ -138,6 +139,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->channel_groups = g_slist_append(NULL, cg);
 		devc = g_malloc0(sizeof(struct dev_context));
 		sr_sw_limits_init(&devc->limits);
+		devc->mode = SR_CONF_OSCILLOSCOPE;
 		sdi->priv = devc;
 		devices = g_slist_append(devices, sdi);
 		serial_close(serial);
@@ -149,7 +151,6 @@ static int config_get(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
-	int ret;
 
 	(void)cg;
 
@@ -159,31 +160,31 @@ static int config_get(uint32_t key, GVariant **data,
 	devc = sdi->priv;
 
 
-	ret = SR_OK;
 	switch (key) {
-		case SR_CONF_LIMIT_SAMPLES:
-			*data = g_variant_new_uint64(devc->limits.limit_samples);
-			break;
-		case SR_CONF_SAMPLE_INTERVAL:
-			*data = g_variant_new_uint64(devc->timegap);
-			break;
-		case SR_CONF_DATA_SOURCE:
-			if (devc->data_source)
-				*data = g_variant_new_string("Live");
-			else
-				*data = g_variant_new_string("Memory");
-			break;
-		default:
-			return SR_ERR_NA;
+	case SR_CONF_LIMIT_SAMPLES:
+		*data = g_variant_new_uint64(devc->limits.limit_samples);
+		break;
+	case SR_CONF_SAMPLE_INTERVAL:
+		*data = g_variant_new_double(devc->timegap);
+		break;
+	case SR_CONF_DATA_SOURCE:
+		if (devc->data_source)
+			*data = g_variant_new_string("Live");
+		else
+			*data = g_variant_new_string("Memory");
+		break;
+	default:
+		return SR_ERR_NA;
 	}
 
-	return ret;
+	return SR_OK;
 }
 
 static int config_set(uint32_t key, GVariant *data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
+	struct sr_channel *ch;
 
 	(void)cg;
 
@@ -193,10 +194,35 @@ static int config_set(uint32_t key, GVariant *data,
 		devc->limits.limit_samples = g_variant_get_uint64(data);
 		break;
 	case SR_CONF_SAMPLE_INTERVAL:
-		devc->timegap = g_variant_get_uint64(data);
+		devc->timegap = g_variant_get_double(data);
 		break;
 	case SR_CONF_DATA_SOURCE:
 		devc->data_source = g_variant_get_boolean(data);
+		break;
+	case SR_CONF_ENABLED:
+		g_slist_free(devc->enabled_channels);
+		devc->enabled_channels = NULL;
+		GSList *l;
+		if (g_variant_is_of_type(data, G_VARIANT_TYPE_STRING))
+			for (l = sdi->channels; l; l = l->next) {
+				ch = l->data;
+				if (!g_strcmp0(ch->name, g_variant_get_string(data, (gsize *) 3)))
+					devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);
+				else
+					sr_dbg("invalid %s channel input",g_variant_get_string(data, (gsize *) 3));
+			}
+		else if (g_variant_is_of_type(data, G_VARIANT_TYPE_INT16))
+		{
+			int channels = g_variant_get_int16(data);
+			for (l = sdi->channels; l; l = l->next) {
+				ch = l->data;
+				if (ch->index<channels) {
+					devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);
+				}
+			}
+		}
+		else
+			sr_dbg("Invalid Channel Input");
 		break;
 	default:
 		return SR_ERR_NA;
@@ -246,11 +272,40 @@ static int configure_channels(const struct sr_dev_inst *sdi)
 	return SR_OK;
 }
 
+static void configure_oscilloscope(const struct sr_dev_inst *sdi)
+{
+	GSList *l;
+	struct dev_context *devc = sdi->priv;
+	struct sr_serial_dev_inst *serial = sdi->conn;
+	struct sr_channel *ch;
+
+//	invalidate_buffer(sdi->channel_groups);
+	if(g_slist_length(devc->enabled_channels) == 1)
+	{
+		ch=devc->enabled_channels->data;
+		devc->channel_one_map = *ch;
+	}
+	else
+		for(l=devc->enabled_channels; l; l=l->next)
+		{
+			ch = l->data;
+			if(!g_strcmp0(ch->name, "CH1"))
+			{
+				devc->channel_one_map = *ch;
+				set_gain(sdi, ch, 1);
+			}
+			else if(!g_strcmp0(ch->name, "CH2"))
+			{
+				set_gain(sdi, ch, 2);
+			}
+		}
+}
+
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 {
 	struct dev_context *devc = sdi->priv;
 	struct sr_serial_dev_inst *serial;
-	configure_channels(sdi);
+//	configure_channels(sdi);
 
 	if (pslab_init(sdi) != SR_OK)
 		return SR_ERR;
@@ -260,7 +315,18 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 
 	serial = sdi->conn;
 	g_usleep(5000000);
-	pslab_update_channels(sdi);
+
+	switch(devc->mode) {
+	case SR_CONF_OSCILLOSCOPE:
+		devc->trigger_enabled = FALSE;
+		if(check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->timegap) !=SR_OK)
+			return SR_ERR_IO;
+		devc->timegap = (int)(devc->timegap*8) / 8;
+		configure_oscilloscope(sdi);
+		caputure_oscilloscope(sdi);
+		pslab_update_channels(sdi); // configure Oscilloscope
+
+	}
 
 	serial_source_add(sdi->session, serial, G_IO_IN, 10,
 					  pslab_receive_data, (void *)sdi);
