@@ -57,7 +57,7 @@ struct dev_context {
 	/* device mode */
 	int mode;
 	/* Acquisition settings */
-	double timegap; // Time gap between samples in microseconds
+	uint64_t timegap; // Time gap between samples in microseconds
 	gboolean data_source;
 	GSList * enabled_channels;
 	struct sr_channel channel_one_map;
@@ -103,7 +103,7 @@ SR_PRIV int pslab_update_samplerate(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_update_vdiv(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_init(const struct sr_dev_inst *sdi);
-SR_PRIV int check_args(guint channels,uint64_t samples ,double timegap);
+SR_PRIV int check_args(guint channels,uint64_t samples ,uint64_t timegap);
 SR_PRIV double lookup_minimum_timegap(guint channels);
 SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain);
 SR_PRIV int find_gain_idx(int gain);

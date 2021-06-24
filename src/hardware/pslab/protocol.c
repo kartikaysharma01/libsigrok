@@ -253,7 +253,7 @@ SR_PRIV double lookup_minimum_timegap(guint channels)
 	return min_timegaps[channels_idx[channels-1][1]][0];
 }
 
-SR_PRIV int check_args(guint channels,uint64_t samples ,double timegap)
+SR_PRIV int check_args(guint channels,uint64_t samples ,uint64_t timegap)
 {
 	if(channels > 4)
 	{
