@@ -108,7 +108,7 @@ SR_PRIV double lookup_minimum_timegap(guint channels);
 SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain);
 SR_PRIV int find_gain_idx(int gain);
 SR_PRIV void get_ack(const struct sr_dev_inst *sdi);
-SR_PRIV int caputure_oscilloscope(const struct sr_dev_inst *sdi);
+SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi);
 SR_PRIV void fetch_data(const struct sr_dev_inst *sdi);
 
 SR_PRIV struct dev_context *pslab_dev_new();
