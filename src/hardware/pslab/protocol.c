@@ -178,7 +178,18 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	// test
 	g_usleep(devc->timegap * devc->limits.limit_samples);
 
-	fetch_data(sdi);
+	*commands = COMMON;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	*commands = RETRIEVE_BUFFER;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	short int startingposition = 0;
+	serial_write_blocking(serial,&startingposition, sizeof (startingposition), serial_timeout(serial, sizeof (startingposition)));
+	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
+//	return SR_OK;
+
+
+//	fetch_data(sdi);
+
 }
 
 SR_PRIV void fetch_data(const struct sr_dev_inst *sdi)
@@ -266,7 +277,7 @@ SR_PRIV int check_args(guint channels,uint64_t samples ,double timegap)
 }
 
 /* TODO find replacement */
-SR_PRIV static int find_gain_idx(int gain)
+SR_PRIV int find_gain_idx(int gain)
 {
 	for(int i=0; i<(int)sizeof(GAIN_VALUES); i++) {
 		if(GAIN_VALUES[i] == gain)

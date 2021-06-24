@@ -324,7 +324,7 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 		devc->timegap = (int)(devc->timegap*8) / 8;
 		configure_oscilloscope(sdi);
 		caputure_oscilloscope(sdi);
-		pslab_update_channels(sdi); // configure Oscilloscope
+//		pslab_update_channels(sdi); // configure Oscilloscope
 
 	}
 
