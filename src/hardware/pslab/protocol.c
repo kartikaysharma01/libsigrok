@@ -267,7 +267,7 @@ SR_PRIV int check_args(guint channels,uint64_t samples ,uint64_t samplerate)
 		return SR_ERR_IO;
 	}
 
-	if(samples || samples > (MAX_SAMPLES/channels))
+	if(samples<0 || samples > (MAX_SAMPLES/channels))
 	{
 		sr_dbg("Invalid number of samples");
 		return SR_ERR_IO;
