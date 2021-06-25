@@ -57,7 +57,7 @@ struct dev_context {
 	/* device mode */
 	int mode;
 	/* Acquisition settings */
-	uint64_t timegap; // Time gap between samples in microseconds
+	uint64_t samplerate; // Time gap between samples in microseconds
 	gboolean data_source;
 	GSList * enabled_channels;
 	struct sr_channel channel_one_map;
@@ -88,7 +88,7 @@ struct channel_priv {
 
 	int chosa;
 
-	int gain;
+	uint64_t gain;
 
 	int programmable_gain_amplifier;
 
@@ -103,9 +103,9 @@ SR_PRIV int pslab_update_samplerate(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_update_vdiv(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_init(const struct sr_dev_inst *sdi);
-SR_PRIV int check_args(guint channels,uint64_t samples ,uint64_t timegap);
-SR_PRIV double lookup_minimum_timegap(guint channels);
-SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain);
+SR_PRIV int check_args(guint channels,uint64_t samples ,uint64_t samplerate);
+SR_PRIV uint64_t lookup_maximum_samplerate(guint channels);
+SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint64_t gain);
 SR_PRIV int find_gain_idx(int gain);
 SR_PRIV void get_ack(const struct sr_dev_inst *sdi);
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi);

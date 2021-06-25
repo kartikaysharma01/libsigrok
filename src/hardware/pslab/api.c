@@ -32,7 +32,7 @@ static const uint32_t drvopts[] = {
 
 static const uint32_t devopts[] = {
 		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET,
-		SR_CONF_SAMPLE_INTERVAL | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET,
 		SR_CONF_ENABLED | SR_CONF_SET,
 //		SR_CONF_CHANNEL_CONFIG | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 //		SR_CONF_HORIZ_TRIGGERPOS | SR_CONF_SET,
@@ -163,8 +163,8 @@ static int config_get(uint32_t key, GVariant **data,
 	case SR_CONF_LIMIT_SAMPLES:
 		*data = g_variant_new_uint64(devc->limits.limit_samples);
 		break;
-	case SR_CONF_SAMPLE_INTERVAL:
-		*data = g_variant_new_uint64(devc->timegap);
+	case SR_CONF_SAMPLERATE:
+		*data = g_variant_new_uint64(devc->samplerate);
 		break;
 	case SR_CONF_DATA_SOURCE:
 		if (devc->data_source)
@@ -192,9 +192,8 @@ static int config_set(uint32_t key, GVariant *data,
 	case SR_CONF_LIMIT_SAMPLES:
 		devc->limits.limit_samples = g_variant_get_uint64(data);
 		break;
-	/* TODO change this to sample rate */
-	case SR_CONF_SAMPLE_INTERVAL:
-		devc->timegap = g_variant_get_uint64(data);
+	case SR_CONF_SAMPLERATE:
+		devc->samplerate = g_variant_get_uint64(data);
 		break;
 	case SR_CONF_DATA_SOURCE:
 		devc->data_source = g_variant_get_boolean(data);
@@ -319,13 +318,14 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	switch(devc->mode) {
 	case SR_CONF_OSCILLOSCOPE:
 		devc->trigger_enabled = FALSE;
-		if(check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->timegap) !=SR_OK)
+		if(check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->samplerate) !=SR_OK)
 			return SR_ERR_IO;
-		devc->timegap = (int)(devc->timegap*8) / 8;
 		configure_oscilloscope(sdi);
 		caputure_oscilloscope(sdi);
 //		pslab_update_channels(sdi); // configure Oscilloscope
-
+		break;
+	default:
+		break;
 	}
 
 	serial_source_add(sdi->session, serial, G_IO_IN, 10,

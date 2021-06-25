@@ -20,9 +20,7 @@
 #include <config.h>
 #include "protocol.h"
 
-//GAIN_VALUES = (1, 2, 4, 5, 8, 10, 16, 32
-int GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
-
+static const uint64_t GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
 
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 {
@@ -115,7 +113,7 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 
 		}
-		if(devc->timegap >= 1)
+		if(devc->samplerate <= 1000)
 		{
 			cp->resolution = 12;
 			*commands = CAPTURE_DMASPEED;
@@ -170,13 +168,13 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	}
 
 	short int samplecount = devc->limits.limit_samples;
-	short int timegap = devc->timegap;
+	short int samplerate = devc->samplerate;
 	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
-	serial_write_blocking(serial,&timegap, sizeof (timegap), serial_timeout(serial, sizeof (timegap)));
+	serial_write_blocking(serial,&samplerate, sizeof (samplerate), serial_timeout(serial, sizeof (samplerate)));
 	get_ack(sdi);
 
 	// test
-	g_usleep(devc->timegap * devc->limits.limit_samples);
+	g_usleep(devc->limits.limit_samples / devc->samplerate);
 
 	*commands = COMMON;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
@@ -245,15 +243,23 @@ SR_PRIV int pslab_init(const struct sr_dev_inst *sdi)
 	return SR_OK;
 }
 
-SR_PRIV double lookup_minimum_timegap(guint channels)
+SR_PRIV uint64_t lookup_maximum_samplerate(guint channels)
 {
-	int channels_idx[3][2] = {{1, 0},{2, 1},{4, 2}};
-	double min_timegaps[3][2] = {{0.5, 0.75}, {0.875, 0.875}, {1.75, 1.75}};
+	static const uint64_t channels_idx[][2] = {
+			{1, 0},
+			{2, 1},
+			{4, 2},
+	};
+	static const uint64_t min_samplerates[][2] = {
+			{2000, 1333},
+			{1142, 1142},
+			{571, 571},
+	};
 	/* TODO: revisit the formulae, not correct rn */
-	return min_timegaps[channels_idx[channels-1][1]][0];
+	return min_samplerates[channels_idx[channels-1][1]][0];
 }
 
-SR_PRIV int check_args(guint channels,uint64_t samples ,uint64_t timegap)
+SR_PRIV int check_args(guint channels,uint64_t samples ,uint64_t samplerate)
 {
 	if(channels > 4)
 	{
@@ -267,32 +273,22 @@ SR_PRIV int check_args(guint channels,uint64_t samples ,uint64_t timegap)
 		return SR_ERR_IO;
 	}
 
-	if(timegap < lookup_minimum_timegap(channels))
+	if(samplerate > lookup_maximum_samplerate(channels))
 	{
-		sr_dbg("TImegap must be atleast %f", lookup_minimum_timegap(channels));
+		sr_dbg("Samplerate must be less than %lu", lookup_maximum_samplerate(channels));
 		return SR_ERR_IO;
 	}
 
 	return SR_OK;
 }
 
-/* TODO find replacement */
-SR_PRIV int find_gain_idx(int gain)
-{
-	for(int i=0; i<(int)sizeof(GAIN_VALUES); i++) {
-		if(GAIN_VALUES[i] == gain)
-			return i;
-	}
-	return -1;
-}
-
-SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain)
+SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint64_t gain)
 {
 	struct sr_serial_dev_inst *serial = sdi->conn;
 	struct channel_priv *cp = ch->priv;
 	cp->gain = gain;
 	int pga = cp->programmable_gain_amplifier;
-	int gain_idx = find_gain_idx(gain);
+	int gain_idx = std_u64_idx((GVariant *) gain, GAIN_VALUES, 8);
 	uint8_t *commands = g_malloc0(sizeof(uint8_t));
 	*commands = ADC;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
