@@ -144,11 +144,15 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devices = g_slist_append(devices, sdi);
 		serial_close(serial);
 	}
+
+	if (!devices)
+		sr_serial_dev_inst_free(serial);
+
 	return std_scan_complete(di, devices);
 }
 
 static int config_get(uint32_t key, GVariant **data,
-	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
+					  const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
 
@@ -161,8 +165,7 @@ static int config_get(uint32_t key, GVariant **data,
 
 	switch (key) {
 	case SR_CONF_LIMIT_SAMPLES:
-		*data = g_variant_new_uint64(devc->limits.limit_samples);
-		break;
+		return sr_sw_limits_config_get(&devc->limits, key, data);
 	case SR_CONF_SAMPLERATE:
 		*data = g_variant_new_uint64(devc->samplerate);
 		break;
@@ -190,8 +193,7 @@ static int config_set(uint32_t key, GVariant *data,
 	devc = sdi->priv;
 	switch (key) {
 	case SR_CONF_LIMIT_SAMPLES:
-		devc->limits.limit_samples = g_variant_get_uint64(data);
-		break;
+		return sr_sw_limits_config_set(&devc->limits, key, data);
 	case SR_CONF_SAMPLERATE:
 		devc->samplerate = g_variant_get_uint64(data);
 		break;
