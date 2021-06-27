@@ -104,7 +104,7 @@ SR_PRIV int pslab_update_vdiv(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_init(const struct sr_dev_inst *sdi);
 SR_PRIV uint64_t lookup_maximum_samplerate(guint channels);
-SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain);
+SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint64_t gain);
 SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution);
 SR_PRIV int find_gain_idx(int gain);
 SR_PRIV int get_ack(const struct sr_dev_inst *sdi);
