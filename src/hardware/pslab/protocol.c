@@ -87,6 +87,7 @@ SR_PRIV int pslab_update_vdiv(const struct sr_dev_inst *sdi)
 
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 {
+	// invalidate_buffer()
 	struct dev_context *devc = sdi->priv;
 	struct sr_serial_dev_inst *serial = sdi->conn;
 	int i;
@@ -259,36 +260,24 @@ SR_PRIV uint64_t lookup_maximum_samplerate(guint channels)
 	return min_samplerates[channels_idx[channels-1][1]][0];
 }
 
-SR_PRIV int check_args(guint channels,uint64_t samples ,uint64_t samplerate)
+SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain)
 {
-	if(channels > 4)
-	{
-		sr_dbg("Number of channels to sample must be 1, 2, 3, or 4");
-		return SR_ERR_IO;
+	if(!(!g_strcmp0(ch->name,"CH1") || !g_strcmp0(ch->name,"CH2"))) {
+		sr_dbg("Analog gain is not available on %s", ch->name);
+		return SR_ERR_ARG;
 	}
 
-	if(samples<0 || samples > (MAX_SAMPLES/channels))
-	{
-		sr_dbg("Invalid number of samples");
-		return SR_ERR_IO;
-	}
-
-	if(samplerate > lookup_maximum_samplerate(channels))
-	{
-		sr_dbg("Samplerate must be less than %lu", lookup_maximum_samplerate(channels));
-		return SR_ERR_IO;
-	}
-
-	return SR_OK;
-}
-
-SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain)
-{
 	struct sr_serial_dev_inst *serial = sdi->conn;
 	struct channel_priv *cp = ch->priv;
 	cp->gain = gain;
 	int pga = cp->programmable_gain_amplifier;
 	int gain_idx = std_u64_idx(g_variant_new_int64(gain), GAIN_VALUES, 8);
+
+	if(gain_idx == -1) {
+		sr_dbg("Invalid gain value");
+		return SR_ERR_ARG;
+	}
+
 	uint8_t *commands = g_malloc0(sizeof(uint8_t));
 	*commands = ADC;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
@@ -299,15 +288,30 @@ SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch
 	*commands = gain_idx;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 
-	get_ack(sdi);
+	if(get_ack(sdi) != SR_OK) {
+		sr_dbg("Could not set set gain.");
+		return SR_ERR_IO;
+	}
+
+	channel_calibrate(ch);
+	return SR_OK;
 }
 
-SR_PRIV void get_ack(const struct sr_dev_inst *sdi)
+SR_PRIV int get_ack(const struct sr_dev_inst *sdi)
 {
 	struct sr_serial_dev_inst *serial = sdi->conn;
 	int *buf = g_malloc0(1);
 	serial_read_blocking(serial,buf,1, serial_timeout(serial,1));
 
-	if(!(*buf & 0x01))
-		sr_dbg("Received non ACK byte while waiting for ACK.");
+	if(!(*buf & 0x01) || !(*buf)) {
+		sr_dbg("Did not receive ACK or Received non ACK byte while waiting for ACK.");
+		return SR_ERR_IO;
+	}
+
+	return SR_OK;
+}
+
+SR_PRIV void channel_calibrate(const struct sr_channel *ch)
+{
+
 }

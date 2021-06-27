@@ -126,13 +126,14 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			if (!g_strcmp0(analog_channels[i].name, "CH1"))
 			{
 				cp->programmable_gain_amplifier = 1;
+				devc->channel_one_map = *ch;
 			}
 			else if (!g_strcmp0(analog_channels[i].name, "CH2"))
 			{
 				cp->programmable_gain_amplifier = 2;
 			}
-
 			ch->priv = cp;
+			channel_calibrate(ch);
 			cg->channels = g_slist_append(cg->channels, ch);
 		}
 		sdi->channel_groups = g_slist_append(NULL, cg);
@@ -157,7 +158,6 @@ static int config_get(uint32_t key, GVariant **data,
 		return SR_ERR_ARG;
 
 	devc = sdi->priv;
-
 	switch (key) {
 	case SR_CONF_LIMIT_SAMPLES:
 		return sr_sw_limits_config_get(&devc->limits, key, data);
@@ -181,7 +181,6 @@ static int config_set(uint32_t key, GVariant *data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
-	struct sr_channel *ch;
 
 	(void)cg;
 
@@ -206,28 +205,25 @@ static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	switch (key) {
-		case SR_CONF_DEVICE_OPTIONS:
-		case SR_CONF_SCAN_OPTIONS:
-			return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
-		default:
-			return SR_ERR_NA;
+	case SR_CONF_DEVICE_OPTIONS:
+	case SR_CONF_SCAN_OPTIONS:
+		return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
+	default:
+		return SR_ERR_NA;
 	}
-
-	return SR_OK;
 }
 
 static int configure_channels(const struct sr_dev_inst *sdi)
 {
 	struct dev_context *devc = sdi->priv;
 	const GSList *l;
-	int p;
 	struct sr_channel *ch;
 
 	g_slist_free(devc->enabled_channels);
 	devc->enabled_channels = NULL;
 	memset(devc->ch_enabled, 0, sizeof(devc->ch_enabled));
 
-	for (l = sdi->channels, p = 0; l; l = l->next, p++) {
+	for (l = sdi->channels; l; l = l->next) {
 		ch = l->data;
 		if(ch->enabled) {
 			devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);
@@ -237,36 +233,43 @@ static int configure_channels(const struct sr_dev_inst *sdi)
 	return SR_OK;
 }
 
-static void configure_oscilloscope(const struct sr_dev_inst *sdi)
+static int check_args(guint channels,uint64_t samples ,uint64_t samplerate)
 {
+	if(channels > 4)
+	{
+		sr_dbg("Number of channels to sample must be 1, 2, 3, or 4");
+		return SR_ERR_IO;
+	}
+
+	if(samples < 0 || samples > (MAX_SAMPLES/channels))
+	{
+		sr_dbg("Invalid number of samples");
+		return SR_ERR_IO;
+	}
+
+	if(samplerate > lookup_maximum_samplerate(channels))
+	{
+		sr_dbg("Samplerate must be less than %lu", lookup_maximum_samplerate(channels));
+		return SR_ERR_IO;
+	}
+
+	return SR_OK;
+}
+
+static void configure_oscilloscope(const struct sr_dev_inst *sdi) {
 	GSList *l;
 	struct dev_context *devc = sdi->priv;
 	struct sr_serial_dev_inst *serial = sdi->conn;
 	struct sr_channel *ch;
 
-//	invalidate_buffer(sdi->channel_groups);
-	if(g_slist_length(devc->enabled_channels) == 1)
-	{
-		ch=devc->enabled_channels->data;
-		devc->channel_one_map = *ch;
+	for (l = devc->enabled_channels; l; l = l->next) {
+		ch = l->data;
+		set_gain(sdi, ch, 1);
+		if (g_slist_length(devc->enabled_channels) == 1)
+			devc->channel_one_map = *ch;
 	}
-	else
-		for(l=devc->enabled_channels; l; l=l->next)
-		{
-			sr_dbg("line 256");
-			ch = l->data;
-			if(!g_strcmp0(ch->name, "CH1"))
-			{
-				devc->channel_one_map = *ch;
-				set_gain(sdi, ch, 1);
-			}
-			else if(!g_strcmp0(ch->name, "CH2"))
-			{
-				set_gain(sdi, ch, 2);
-			}
-		}
-	sr_dbg("line 268");
 }
+
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 {
