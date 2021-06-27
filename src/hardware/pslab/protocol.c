@@ -42,7 +42,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 		/* Serial data arrived. */
 		short int * buf = g_malloc0(2);
 		serial_read_nonblocking(serial,buf,2);
-		printf("output =%d \n",*buf);
+		sr_spew("output =%d \n",*buf);
 	}
 
 //	if (sr_sw_limits_check(&devc->limits) || stop)
@@ -113,7 +113,7 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 
 		}
-		if(devc->samplerate <= 1000)
+		if(devc->samplerate <= 1000000)
 		{
 			set_resolution(devc->channel_one_map,12);
 			*commands = CAPTURE_DMASPEED;
@@ -167,10 +167,10 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	}
 
-	uint32_t samplecount = devc->limits.limit_samples;
-	uint32_t samplerate = devc->samplerate;
+	short int samplecount = devc->limits.limit_samples;
+	short int timegap = 1000000/devc->samplerate;
 	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
-	serial_write_blocking(serial,&samplerate, sizeof (samplerate), serial_timeout(serial, sizeof (samplerate)));
+	serial_write_blocking(serial,&timegap, sizeof (timegap), serial_timeout(serial, sizeof (timegap)));
 
 	if (get_ack(sdi) != SR_OK)
 		sr_dbg("Failed to capture samples");
@@ -184,9 +184,9 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	*commands = RETRIEVE_BUFFER;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	int startingposition = 0;
+	short int startingposition = 0;
 	serial_write_blocking(serial,&startingposition, sizeof (startingposition), serial_timeout(serial, sizeof (startingposition)));
-	int samples = samplecount * g_slist_length(devc->enabled_channels);
+	short int samples = samplecount * g_slist_length(devc->enabled_channels);
 	serial_write_blocking(serial,&samples, sizeof (samples), serial_timeout(serial, sizeof (samples)));
 //	return SR_OK;
 
@@ -256,9 +256,9 @@ SR_PRIV uint64_t lookup_maximum_samplerate(guint channels)
 			{4, 2},
 	};
 	static const uint64_t min_samplerates[][2] = {
-			{2000, 1333},
-			{1142, 1142},
-			{571, 571},
+			{2000000, 1333333},
+			{1142857, 1142857},
+			{571428, 571428},
 	};
 	/* TODO: revisit the formulae, not correct rn */
 	return min_samplerates[channels_idx[channels-1][1]][0];
@@ -292,7 +292,7 @@ SR_PRIV gboolean progress(const struct sr_dev_inst *sdi)
 	return capturing_complete;
 }
 
-SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain)
+SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint64_t gain)
 {
 	if(!(!g_strcmp0(ch->name,"CH1") || !g_strcmp0(ch->name,"CH2"))) {
 		sr_dbg("Analog gain is not available on %s", ch->name);
@@ -303,7 +303,7 @@ SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch,
 	struct channel_priv *cp = ch->priv;
 	cp->gain = gain;
 	int pga = cp->programmable_gain_amplifier;
-	int gain_idx = std_u64_idx(g_variant_new_int64(gain), GAIN_VALUES, 8);
+	int gain_idx = std_u64_idx(g_variant_new_uint64(gain), GAIN_VALUES, 8);
 
 	if(gain_idx == -1) {
 		sr_dbg("Invalid gain value");

@@ -107,6 +107,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sr_info("PSLab device found: %s on port: %s", version, device_path);
 
 		sdi = g_new0(struct sr_dev_inst, 1);
+		devc = g_new0(struct dev_context, 1);
 		sdi->status = SR_ST_INACTIVE;
 		sdi->inst_type = SR_INST_SERIAL;
 		sdi->vendor = g_strdup("FOSSASIA");
@@ -126,7 +127,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			if (!g_strcmp0(analog_channels[i].name, "CH1"))
 			{
 				cp->programmable_gain_amplifier = 1;
-				devc->channel_one_map = *ch;
+				devc->channel_one_map = ch;
 			}
 			else if (!g_strcmp0(analog_channels[i].name, "CH2"))
 			{
@@ -137,7 +138,6 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			cg->channels = g_slist_append(cg->channels, ch);
 		}
 		sdi->channel_groups = g_slist_append(NULL, cg);
-		devc = g_malloc0(sizeof(struct dev_context));
 		sr_sw_limits_init(&devc->limits);
 		devc->mode = SR_CONF_OSCILLOSCOPE;
 		sdi->priv = devc;
@@ -266,7 +266,7 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi) {
 		ch = l->data;
 		set_gain(sdi, ch, 1);
 		if (g_slist_length(devc->enabled_channels) == 1)
-			devc->channel_one_map = *ch;
+			devc->channel_one_map = ch;
 	}
 }
 
