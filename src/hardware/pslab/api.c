@@ -33,7 +33,6 @@ static const uint32_t drvopts[] = {
 static const uint32_t devopts[] = {
 		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET,
 		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET,
-		SR_CONF_ENABLED | SR_CONF_SET,
 //		SR_CONF_CHANNEL_CONFIG | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 //		SR_CONF_HORIZ_TRIGGERPOS | SR_CONF_SET,
 //		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
@@ -144,10 +143,6 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devices = g_slist_append(devices, sdi);
 		serial_close(serial);
 	}
-
-	if (!devices)
-		sr_serial_dev_inst_free(serial);
-
 	return std_scan_complete(di, devices);
 }
 
@@ -199,31 +194,6 @@ static int config_set(uint32_t key, GVariant *data,
 		break;
 	case SR_CONF_DATA_SOURCE:
 		devc->data_source = g_variant_get_boolean(data);
-		break;
-	case SR_CONF_ENABLED:
-		g_slist_free(devc->enabled_channels);
-		devc->enabled_channels = NULL;
-		GSList *l;
-		if (g_variant_is_of_type(data, G_VARIANT_TYPE_STRING))
-			for (l = sdi->channels; l; l = l->next) {
-				ch = l->data;
-				if (!g_strcmp0(ch->name, g_variant_get_string(data, (gsize *) 3)))
-					devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);
-				else
-					sr_dbg("invalid %s channel input",g_variant_get_string(data, (gsize *) 3));
-			}
-		else if (g_variant_is_of_type(data, G_VARIANT_TYPE_INT16))
-		{
-			int channels = g_variant_get_int16(data);
-			for (l = sdi->channels; l; l = l->next) {
-				ch = l->data;
-				if (ch->index<channels) {
-					devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);
-				}
-			}
-		}
-		else
-			sr_dbg("Invalid Channel Input");
 		break;
 	default:
 		return SR_ERR_NA;
