@@ -18,6 +18,7 @@
  */
 
 #include <config.h>
+#include <math.h>
 #include "protocol.h"
 
 static const uint64_t GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
@@ -41,9 +42,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 		/* Serial data arrived. */
 		short int * buf = g_malloc0(2);
 		serial_read_nonblocking(serial,buf,2);
-		printf("outpiut %d \n",*buf);
-		printf("line 42\n");
-
+		printf("output =%d \n",*buf);
 	}
 
 //	if (sr_sw_limits_check(&devc->limits) || stop)
@@ -93,11 +92,11 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	int i;
 	GSList *l;
 
-	struct channel_priv *cp = devc->channel_one_map.priv;
-	cp->resolution =10;
-	int chosa = cp->chosa;
-	cp->samples_in_buffer = devc->limits.limit_samples;
-	cp->buffer_idx = 0;
+	struct channel_priv *cp_map = devc->channel_one_map->priv;
+	set_resolution(devc->channel_one_map,10);
+	int chosa = cp_map->chosa;
+	cp_map->samples_in_buffer = devc->limits.limit_samples;
+	cp_map->buffer_idx = 0;
 
 	uint8_t *commands;
 	commands = g_malloc0(sizeof(uint8_t));
@@ -116,7 +115,7 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 		}
 		if(devc->samplerate <= 1000)
 		{
-			cp->resolution = 12;
+			set_resolution(devc->channel_one_map,12);
 			*commands = CAPTURE_DMASPEED;
 			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 			*commands = chosa | 0x80;
@@ -137,10 +136,10 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			struct sr_channel *ch = l->data;
 			if(!g_strcmp0(ch->name, "CH2"))
 			{
-				struct channel_priv *cp2 = ch->priv;
-				cp2->resolution = 10;
-				cp2->samples_in_buffer = devc->limits.limit_samples;
-				cp2->buffer_idx = 1 * devc->limits.limit_samples;
+				struct channel_priv *cp = ch->priv;
+				set_resolution(ch,10);
+				cp->samples_in_buffer = devc->limits.limit_samples;
+				cp->buffer_idx = 1 * devc->limits.limit_samples;
 				break;
 			}
 		}
@@ -156,10 +155,10 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			struct sr_channel *ch = l->data;
 			if(g_strcmp0(ch->name, "CH1"))
 			{
-				struct channel_priv *cp2 = ch->priv;
-				cp2->resolution = 10;
-				cp2->samples_in_buffer = devc->limits.limit_samples;
-				cp2->buffer_idx = (i+1) * devc->limits.limit_samples;
+				struct channel_priv *cp = ch->priv;
+				set_resolution(ch,10);
+				cp->samples_in_buffer = devc->limits.limit_samples;
+				cp->buffer_idx = (i + 1) * devc->limits.limit_samples;
 			}
 		}
 		*commands = CAPTURE_FOUR;
@@ -168,22 +167,27 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	}
 
-	short int samplecount = devc->limits.limit_samples;
-	short int samplerate = devc->samplerate;
+	uint32_t samplecount = devc->limits.limit_samples;
+	uint32_t samplerate = devc->samplerate;
 	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
 	serial_write_blocking(serial,&samplerate, sizeof (samplerate), serial_timeout(serial, sizeof (samplerate)));
-	get_ack(sdi);
+
+	if (get_ack(sdi) != SR_OK)
+		sr_dbg("Failed to capture samples");
 
 	// test
 	g_usleep(devc->limits.limit_samples / devc->samplerate);
+	while(!progress(sdi))
+		continue;
 
 	*commands = COMMON;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	*commands = RETRIEVE_BUFFER;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	short int startingposition = 0;
+	int startingposition = 0;
 	serial_write_blocking(serial,&startingposition, sizeof (startingposition), serial_timeout(serial, sizeof (startingposition)));
-	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
+	int samples = samplecount * g_slist_length(devc->enabled_channels);
+	serial_write_blocking(serial,&samples, sizeof (samples), serial_timeout(serial, sizeof (samples)));
 //	return SR_OK;
 
 
@@ -258,6 +262,34 @@ SR_PRIV uint64_t lookup_maximum_samplerate(guint channels)
 	};
 	/* TODO: revisit the formulae, not correct rn */
 	return min_samplerates[channels_idx[channels-1][1]][0];
+}
+
+SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution)
+{
+	struct channel_priv *cp = ch->priv;
+	cp->resolution = pow(2,resolution) - 1;
+	channel_calibrate(ch);
+}
+
+SR_PRIV gboolean progress(const struct sr_dev_inst *sdi)
+{
+	struct sr_serial_dev_inst *serial = sdi->conn;
+	uint8_t *commands = g_malloc0(sizeof(uint8_t));
+	*commands = ADC;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	*commands = GET_CAPTURE_STATUS;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+
+	int *buf = g_malloc0(1);
+	serial_read_blocking(serial,buf,1, serial_timeout(serial,1));
+	int capturing_complete = *buf;
+	g_free(buf);
+	int *buf2 = g_malloc0(2);
+	serial_read_blocking(serial,buf2,2, serial_timeout(serial,2));
+	int samples_read = *buf2;
+	get_ack(sdi);
+
+	return capturing_complete;
 }
 
 SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain)

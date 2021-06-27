@@ -60,7 +60,7 @@ struct dev_context {
 	uint64_t samplerate; // Time gap between samples in microseconds
 	gboolean data_source;
 	GSList * enabled_channels;
-	struct sr_channel channel_one_map;
+	const struct sr_channel *channel_one_map;
 	gboolean ch_enabled[NUM_ANALOG_CHANNELS];
 	struct sr_sw_limits limits;
 	unsigned char buf[BUFSIZE];
@@ -105,11 +105,13 @@ SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_init(const struct sr_dev_inst *sdi);
 SR_PRIV uint64_t lookup_maximum_samplerate(guint channels);
 SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain);
+SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution);
 SR_PRIV int find_gain_idx(int gain);
 SR_PRIV int get_ack(const struct sr_dev_inst *sdi);
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi);
 SR_PRIV void fetch_data(const struct sr_dev_inst *sdi);
 SR_PRIV void channel_calibrate(const struct sr_channel *ch);
+SR_PRIV gboolean progress(const struct sr_dev_inst *sdi);
 SR_PRIV struct dev_context *pslab_dev_new();
 
 #endif
