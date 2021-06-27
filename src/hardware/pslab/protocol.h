@@ -105,7 +105,7 @@ SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_init(const struct sr_dev_inst *sdi);
 SR_PRIV int check_args(guint channels,uint64_t samples ,uint64_t samplerate);
 SR_PRIV uint64_t lookup_maximum_samplerate(guint channels);
-SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint64_t gain);
+SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain);
 SR_PRIV int find_gain_idx(int gain);
 SR_PRIV void get_ack(const struct sr_dev_inst *sdi);
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi);

@@ -118,7 +118,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		cg->name = g_strdup("Analog");
 		for (int i = 0; i < NUM_ANALOG_CHANNELS; i++)
 		{
-			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
+			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, FALSE, analog_channels[i].name);
 			struct channel_priv *cp = g_new0(struct channel_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
 			cp->gain = 1;
@@ -229,15 +229,9 @@ static int configure_channels(const struct sr_dev_inst *sdi)
 
 	for (l = sdi->channels, p = 0; l; l = l->next, p++) {
 		ch = l->data;
-		if (!g_strcmp0(ch->name, "CH1"))  {
-			struct channel_priv *cp = ch->priv;
-			cp->resolution = 10;
-			cp->samples_in_buffer = devc->limits.limit_samples;
-			cp->buffer_idx = 0;
-		}
-		if (p < NUM_ANALOG_CHANNELS) {
-			devc->ch_enabled[p] = ch->enabled;
+		if(ch->enabled) {
 			devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);
+			sr_spew("enabled channels: {} %s", ch->name);
 		}
 	}
 	return SR_OK;
@@ -259,6 +253,7 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 	else
 		for(l=devc->enabled_channels; l; l=l->next)
 		{
+			sr_dbg("line 256");
 			ch = l->data;
 			if(!g_strcmp0(ch->name, "CH1"))
 			{
@@ -270,13 +265,14 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 				set_gain(sdi, ch, 2);
 			}
 		}
+	sr_dbg("line 268");
 }
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 {
 	struct dev_context *devc = sdi->priv;
 	struct sr_serial_dev_inst *serial;
-//	configure_channels(sdi);
+	configure_channels(sdi);
 
 	if (pslab_init(sdi) != SR_OK)
 		return SR_ERR;
@@ -285,7 +281,6 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	std_session_send_df_header(sdi);
 
 	serial = sdi->conn;
-	g_usleep(5000000);
 
 	switch(devc->mode) {
 	case SR_CONF_OSCILLOSCOPE:

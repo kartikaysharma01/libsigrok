@@ -282,13 +282,13 @@ SR_PRIV int check_args(guint channels,uint64_t samples ,uint64_t samplerate)
 	return SR_OK;
 }
 
-SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint64_t gain)
+SR_PRIV void set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, int gain)
 {
 	struct sr_serial_dev_inst *serial = sdi->conn;
 	struct channel_priv *cp = ch->priv;
 	cp->gain = gain;
 	int pga = cp->programmable_gain_amplifier;
-	int gain_idx = std_u64_idx((GVariant *) gain, GAIN_VALUES, 8);
+	int gain_idx = std_u64_idx(g_variant_new_int64(gain), GAIN_VALUES, 8);
 	uint8_t *commands = g_malloc0(sizeof(uint8_t));
 	*commands = ADC;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
