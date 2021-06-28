@@ -167,8 +167,8 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	}
 
-	int samplecount = devc->limits.limit_samples;
-	int timegap = (int)(8000000/devc->samplerate);
+	short int samplecount = devc->limits.limit_samples;
+	short int timegap = (int)(8000000/devc->samplerate);
 	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
 	serial_write_blocking(serial,&timegap, sizeof (timegap), serial_timeout(serial, sizeof (timegap)));
 
@@ -177,16 +177,16 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 
 	// test
 	g_usleep(devc->limits.limit_samples / devc->samplerate);
-	while(!progress(sdi))
-		continue;
+//	while(!progress(sdi))
+//		continue;
 
 	*commands = COMMON;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	*commands = RETRIEVE_BUFFER;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	int startingposition = 0;
+	short int startingposition = 0;
 	serial_write_blocking(serial,&startingposition, sizeof (startingposition), serial_timeout(serial, sizeof (startingposition)));
-	int samples = samplecount * g_slist_length(devc->enabled_channels);
+	short int samples = samplecount * g_slist_length(devc->enabled_channels);
 	serial_write_blocking(serial,&samples, sizeof (samples), serial_timeout(serial, sizeof (samples)));
 //	return SR_OK;
 
