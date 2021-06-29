@@ -33,11 +33,9 @@ static const uint32_t drvopts[] = {
 static const uint32_t devopts[] = {
 		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET,
 		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET,
-//		SR_CONF_CHANNEL_CONFIG | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 //		SR_CONF_HORIZ_TRIGGERPOS | SR_CONF_SET,
-//		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
-//		SR_CONF_TRIGGER_SLOPE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
-//		SR_CONF_TRIGGER_LEVEL | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+		SR_CONF_TRIGGER_LEVEL | SR_CONF_GET | SR_CONF_SET,
 		SR_CONF_DATA_SOURCE | SR_CONF_GET | SR_CONF_SET,
 };
 
@@ -140,11 +138,28 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->channel_groups = g_slist_append(NULL, cg);
 		sr_sw_limits_init(&devc->limits);
 		devc->mode = SR_CONF_OSCILLOSCOPE;
+		devc->trigger_enabled = FALSE;
+		devc->trigger_voltage = 0;
 		sdi->priv = devc;
 		devices = g_slist_append(devices, sdi);
 		serial_close(serial);
 	}
 	return std_scan_complete(di, devices);
+}
+
+static int assign_channel(const char* channel_name, const struct sr_channel *target, GSList* list)
+{
+	GSList *l;
+	struct sr_channel *ch;
+	for(l = list; l ; l = l->next) {
+		ch = l->data;
+		if(!g_strcmp0(ch->name, channel_name)) {
+			target = ch;
+			return 1;
+		}
+	}
+	target = NULL;
+	return 0;
 }
 
 static int config_get(uint32_t key, GVariant **data,
@@ -170,6 +185,12 @@ static int config_get(uint32_t key, GVariant **data,
 		else
 			*data = g_variant_new_string("Memory");
 		break;
+	case SR_CONF_TRIGGER_SOURCE:
+		*data = g_variant_new_string(devc->trigger_channel->name);
+		break;
+	case SR_CONF_TRIGGER_LEVEL:
+		*data = g_variant_new_double(devc->trigger_voltage);
+		break;
 	default:
 		return SR_ERR_NA;
 	}
@@ -183,6 +204,7 @@ static int config_set(uint32_t key, GVariant *data,
 	struct dev_context *devc;
 
 	(void)cg;
+	const char *name;
 
 	devc = sdi->priv;
 	switch (key) {
@@ -194,6 +216,18 @@ static int config_set(uint32_t key, GVariant *data,
 	case SR_CONF_DATA_SOURCE:
 		devc->data_source = g_variant_get_boolean(data);
 		break;
+	case SR_CONF_TRIGGER_SOURCE:
+		devc->trigger_enabled = TRUE;
+		name = g_variant_get_string(data,0);
+		if(!assign_channel(name, devc->trigger_channel,devc->enabled_channels)) {
+			sr_dbg("Channel %s can not be sampled",name);
+			return SR_ERR_ARG;
+		}
+		break;
+	case SR_CONF_TRIGGER_LEVEL:
+		devc->trigger_enabled = TRUE;
+		devc->trigger_voltage = g_variant_get_double(data);
+		break;
 	default:
 		return SR_ERR_NA;
 	}
@@ -204,10 +238,19 @@ static int config_set(uint32_t key, GVariant *data,
 static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
+	struct dev_context *devc;
+
+	if (!sdi)
+		return SR_ERR_ARG;
+
+	devc = sdi->priv;
 	switch (key) {
 	case SR_CONF_DEVICE_OPTIONS:
 	case SR_CONF_SCAN_OPTIONS:
 		return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
+	case SR_CONF_TRIGGER_SOURCE:
+		*data = (GVariant *) devc->enabled_channels;
+		break;
 	default:
 		return SR_ERR_NA;
 	}
@@ -268,6 +311,12 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi) {
 		if (g_slist_length(devc->enabled_channels) == 1)
 			devc->channel_one_map = ch;
 	}
+
+	if(!devc->trigger_channel)
+		devc->trigger_channel = devc->channel_one_map;
+	if(devc->trigger_enabled)
+		configure_trigger(sdi);
+
 }
 
 
@@ -287,7 +336,6 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 
 	switch(devc->mode) {
 	case SR_CONF_OSCILLOSCOPE:
-		devc->trigger_enabled = FALSE;
 		if(check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->samplerate) !=SR_OK)
 			return SR_ERR_IO;
 		configure_oscilloscope(sdi);

@@ -56,6 +56,10 @@
 struct dev_context {
 	/* device mode */
 	int mode;
+	/* trigger */
+	gboolean trigger_enabled;
+	const struct sr_channel *trigger_channel;
+	double trigger_voltage;
 	/* Acquisition settings */
 	uint64_t samplerate; // Time gap between samples in microseconds
 	gboolean data_source;
@@ -65,7 +69,6 @@ struct dev_context {
 	struct sr_sw_limits limits;
 	unsigned char buf[BUFSIZE];
 	int buflen;
-	gboolean trigger_enabled;
 };
 
 struct analog_channel {
@@ -107,6 +110,7 @@ SR_PRIV uint64_t lookup_maximum_samplerate(guint channels);
 SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint64_t gain);
 SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution);
 SR_PRIV int get_ack(const struct sr_dev_inst *sdi);
+SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi);
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi);
 SR_PRIV void fetch_data(const struct sr_dev_inst *sdi);
 SR_PRIV void channel_calibrate(const struct sr_channel *ch);
