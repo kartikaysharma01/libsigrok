@@ -141,6 +141,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devc->mode = SR_CONF_OSCILLOSCOPE;
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
+		devc->trigger_channel = devc->channel_one_map;
 		sdi->priv = devc;
 		devices = g_slist_append(devices, sdi);
 		serial_close(serial);
