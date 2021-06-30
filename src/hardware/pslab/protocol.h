@@ -84,17 +84,13 @@ struct analog_channel {
 };
 
 struct channel_priv {
-
 	uint64_t samples_in_buffer;
-
 	int buffer_idx;
-
 	int chosa;
-
+	double min_input;
+	double max_input;
 	uint64_t gain;
-
 	int programmable_gain_amplifier;
-
 	double resolution;
 };
 
@@ -113,8 +109,9 @@ SR_PRIV int get_ack(const struct sr_dev_inst *sdi);
 SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi);
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi);
 SR_PRIV void fetch_data(const struct sr_dev_inst *sdi);
-SR_PRIV void channel_calibrate(const struct sr_channel *ch);
 SR_PRIV gboolean progress(const struct sr_dev_inst *sdi);
+SR_PRIV double scale(const struct sr_channel *ch, int raw_value);
+SR_PRIV int unscale(const struct sr_channel *ch, double voltage);
 SR_PRIV struct dev_context *pslab_dev_new();
 
 #endif

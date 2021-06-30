@@ -120,6 +120,8 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, FALSE, analog_channels[i].name);
 			struct channel_priv *cp = g_new0(struct channel_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
+			cp->min_input = analog_channels[i].minInput;
+			cp->max_input = analog_channels[i].maxInput;
 			cp->gain = 1;
 			cp->resolution = pow(2, 10) - 1;
 			if (!g_strcmp0(analog_channels[i].name, "CH1"))
@@ -132,7 +134,6 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 				cp->programmable_gain_amplifier = 2;
 			}
 			ch->priv = cp;
-			channel_calibrate(ch);
 			cg->channels = g_slist_append(cg->channels, ch);
 		}
 		sdi->channel_groups = g_slist_append(NULL, cg);

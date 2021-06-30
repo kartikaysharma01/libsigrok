@@ -268,7 +268,6 @@ SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution)
 {
 	struct channel_priv *cp = ch->priv;
 	cp->resolution = pow(2,resolution) - 1;
-	channel_calibrate(ch);
 }
 
 SR_PRIV gboolean progress(const struct sr_dev_inst *sdi)
@@ -325,7 +324,6 @@ SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch,
 		return SR_ERR_IO;
 	}
 
-	channel_calibrate(ch);
 	return SR_OK;
 }
 
@@ -347,9 +345,32 @@ SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi)
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	*commands = (0 << 4) | (1 << channel);
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-//	int level = ((struct channel_priv *)(devc->trigger_channel->priv))->unscale
+	int level = unscale(devc->trigger_channel,devc->trigger_voltage);
+	/* TODO send int */
 //	send_int(level);
 	get_ack(sdi);
+}
+
+SR_PRIV double scale(const struct sr_channel *ch, int raw_value)
+{
+	struct channel_priv *cp = ch->priv;
+	double slope = (cp->max_input/cp->gain - cp->min_input/cp->gain) / cp->resolution;
+	double intercept = cp->min_input/cp->gain;
+	return slope * raw_value + intercept;
+}
+
+SR_PRIV int unscale(const struct sr_channel *ch, double voltage)
+{
+	struct channel_priv *cp = ch->priv;
+	double slope = (cp->max_input/cp->gain - cp->min_input/cp->gain) / cp->resolution;
+	double intercept = cp->min_input/cp->gain;
+	int level = (int)((voltage - intercept) / slope);
+	if(level < 0)
+		level =0;
+	else if(level > cp->resolution )
+		level = (int)cp->resolution;
+
+	return level;
 }
 
 SR_PRIV int get_ack(const struct sr_dev_inst *sdi)
@@ -364,9 +385,4 @@ SR_PRIV int get_ack(const struct sr_dev_inst *sdi)
 	}
 
 	return SR_OK;
-}
-
-SR_PRIV void channel_calibrate(const struct sr_channel *ch)
-{
-
 }
