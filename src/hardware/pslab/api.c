@@ -174,6 +174,7 @@ static int config_get(uint32_t key, GVariant **data,
 		return SR_ERR_ARG;
 
 	devc = sdi->priv;
+	const char *tmp_str;
 	switch (key) {
 	case SR_CONF_LIMIT_SAMPLES:
 		return sr_sw_limits_config_get(&devc->limits, key, data);
@@ -187,7 +188,8 @@ static int config_get(uint32_t key, GVariant **data,
 			*data = g_variant_new_string("Memory");
 		break;
 	case SR_CONF_TRIGGER_SOURCE:
-		*data = g_variant_new_string((const gchar *) devc->trigger_channel->name);
+		tmp_str = devc->trigger_channel->name;
+		*data = g_variant_new_string(tmp_str);
 		break;
 	case SR_CONF_TRIGGER_LEVEL:
 		*data = g_variant_new_double(devc->trigger_voltage);
