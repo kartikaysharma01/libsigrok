@@ -187,7 +187,7 @@ static int config_get(uint32_t key, GVariant **data,
 			*data = g_variant_new_string("Memory");
 		break;
 	case SR_CONF_TRIGGER_SOURCE:
-		*data = g_variant_new_string(devc->trigger_channel->name);
+		*data = g_variant_new_string((const gchar *) devc->trigger_channel->name);
 		break;
 	case SR_CONF_TRIGGER_LEVEL:
 		*data = g_variant_new_double(devc->trigger_voltage);
