@@ -277,24 +277,37 @@ static int configure_channels(const struct sr_dev_inst *sdi)
 	return SR_OK;
 }
 
-static int check_args(guint channels,uint64_t samples ,uint64_t samplerate)
+static uint64_t lookup_maximum_samplerate(guint channels, gboolean trigger)
 {
-	if(channels > 4)
-	{
+	static const uint64_t channels_idx[][2] = {
+			{1, 0},
+			{2, 1},
+			{3, 2},
+			{4, 2},
+	};
+	static const uint64_t min_samplerates[][2] = {
+			{2000000, 1333333},
+			{1142857, 1142857},
+			{571428, 571428},
+	};
+	return min_samplerates[channels_idx[channels-1][1]][trigger];
+}
+
+static int check_args(guint channels,uint64_t samples ,uint64_t samplerate, gboolean trigger)
+{
+	if(channels > 4) {
 		sr_dbg("Number of channels to sample must be 1, 2, 3, or 4");
-		return SR_ERR_IO;
+		return SR_ERR_ARG;
 	}
 
-	if(samples < 0 || samples > (MAX_SAMPLES/channels))
-	{
+	if(samples < 0 || samples > (MAX_SAMPLES/channels)) {
 		sr_dbg("Invalid number of samples");
-		return SR_ERR_IO;
+		return SR_ERR_ARG;
 	}
 
-	if(samplerate > lookup_maximum_samplerate(channels))
-	{
-		sr_dbg("Samplerate must be less than %lu", lookup_maximum_samplerate(channels));
-		return SR_ERR_IO;
+	if(samplerate > lookup_maximum_samplerate(channels, trigger)) {
+		sr_dbg("Samplerate must be less than %lu", lookup_maximum_samplerate(channels, trigger));
+		return SR_ERR_ARG;
 	}
 
 	return SR_OK;
@@ -303,7 +316,6 @@ static int check_args(guint channels,uint64_t samples ,uint64_t samplerate)
 static void configure_oscilloscope(const struct sr_dev_inst *sdi) {
 	GSList *l;
 	struct dev_context *devc = sdi->priv;
-	struct sr_serial_dev_inst *serial = sdi->conn;
 	struct sr_channel *ch;
 
 	for (l = devc->enabled_channels; l; l = l->next) {
@@ -337,7 +349,7 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 
 	switch(devc->mode) {
 	case SR_CONF_OSCILLOSCOPE:
-		if(check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->samplerate) !=SR_OK)
+		if(check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled) !=SR_OK)
 			return SR_ERR_IO;
 		configure_oscilloscope(sdi);
 		caputure_oscilloscope(sdi);

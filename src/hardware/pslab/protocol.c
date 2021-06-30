@@ -248,21 +248,6 @@ SR_PRIV int pslab_init(const struct sr_dev_inst *sdi)
 	return SR_OK;
 }
 
-SR_PRIV uint64_t lookup_maximum_samplerate(guint channels)
-{
-	static const uint64_t channels_idx[][2] = {
-			{1, 0},
-			{2, 1},
-			{4, 2},
-	};
-	static const uint64_t min_samplerates[][2] = {
-			{2000000, 1333333},
-			{1142857, 1142857},
-			{571428, 571428},
-	};
-	/* TODO: revisit the formulae, not correct rn */
-	return min_samplerates[channels_idx[channels-1][1]][0];
-}
 
 SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution)
 {
