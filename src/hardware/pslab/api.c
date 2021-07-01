@@ -30,6 +30,10 @@ static const uint32_t drvopts[] = {
 		SR_CONF_OSCILLOSCOPE,
 };
 
+static const char *channel_names[] = {
+		"CH1", "CH2", "CH3", "CH4", "MIC", "VOL",
+};
+
 static const uint32_t devopts[] = {
 		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET,
 		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET,
@@ -224,10 +228,12 @@ static int config_set(uint32_t key, GVariant *data,
 		break;
 	case SR_CONF_TRIGGER_SOURCE:
 		sr_dbg("ln 226");
-		devc->trigger_enabled = TRUE;
-//		g_free(devc->trigger_channel);
-		name = g_variant_get_string(data,NULL);
-		devc->trigger_channel =	g_strdup(name);
+		int idx;
+		if ((idx = std_str_idx(data, channel_names, 6)) < 0)
+			return SR_ERR_ARG;
+//		devc->trigger_enabled = TRUE;
+		g_free(devc->trigger_channel);
+		devc->trigger_channel = g_strdup(channel_names[idx]);
 		break;
 	case SR_CONF_TRIGGER_LEVEL:
 		devc->trigger_enabled = TRUE;
@@ -254,7 +260,9 @@ static int config_list(uint32_t key, GVariant **data,
 	case SR_CONF_SCAN_OPTIONS:
 		return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
 	case SR_CONF_TRIGGER_SOURCE:
-		*data = (GVariant *) devc->enabled_channels;
+		if (!devc)
+			return SR_ERR_ARG;
+		*data = g_variant_new_strv(channel_names, 6);
 		break;
 	default:
 		return SR_ERR_NA;
