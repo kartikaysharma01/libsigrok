@@ -40,9 +40,10 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	serial = sdi->conn;
 	if (revents == G_IO_IN) {
 		/* Serial data arrived. */
-		uint16_t * buf = g_malloc0(2);
-		serial_read_nonblocking(serial,buf,2);
-		sr_spew("output =%d \n",*buf);
+		uint16_t *buf = g_malloc0(2);
+		serial_read_blocking(serial,buf,2, serial_timeout(serial,2));
+		uint16_t output = *buf;
+		sr_dbg("ln 198 output == %d", output);
 	}
 
 //	if (sr_sw_limits_check(&devc->limits) || stop)
@@ -170,15 +171,16 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	uint16_t samplecount = devc->limits.limit_samples;
 	uint16_t timegap = (int)(8000000/devc->samplerate);
 	serial_write_blocking(serial,&samplecount, 2, serial_timeout(serial, 2));
-	serial_write_blocking(serial,&timegap, 2, serial_timeout(serial, 2)));
+	serial_write_blocking(serial,&timegap, 2, serial_timeout(serial, 2));
 
 	if (get_ack(sdi) != SR_OK)
 		sr_dbg("Failed to capture samples");
 
 	// test
-	g_usleep(devc->limits.limit_samples / devc->samplerate);
-//	while(!progress(sdi))
-//		continue;
+	g_usleep(1000000 * devc->limits.limit_samples / devc->samplerate);
+
+	while(!progress(sdi))
+		continue;
 
 	*commands = COMMON;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
@@ -186,8 +188,21 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	uint16_t startingposition = 0 ;
 	serial_write_blocking(serial,&startingposition, 2, serial_timeout(serial, 2));
-	uint16_t samples = samplecount * g_slist_length(devc->enabled_channels);
-	serial_write_blocking(serial,&samples, 2, serial_timeout(serial,  2));
+	uint16_t samples = samplecount ;
+	serial_write_blocking(serial,&samplecount, 2, serial_timeout(serial,  2));
+
+//	for(int j=0; j<samplecount; j++)
+//	{
+//		uint16_t *buf2 = g_malloc0(2);
+//		serial_read_blocking(serial,buf2,2, serial_timeout(serial,2));
+//		uint16_t output = *buf2;
+//		sr_dbg("ln 198 output == %d", output);
+//	}
+//
+//	if (get_ack(sdi) == SR_OK)
+//		sr_dbg("Successful to fetch buffer");
+
+
 //	return SR_OK;
 
 
@@ -264,14 +279,16 @@ SR_PRIV gboolean progress(const struct sr_dev_inst *sdi)
 	*commands = GET_CAPTURE_STATUS;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 
-	int *buf = g_malloc0(1);
+	uint8_t *buf = g_malloc0(1);
 	serial_read_blocking(serial,buf,1, serial_timeout(serial,1));
-	int capturing_complete = *buf;
+	uint8_t capturing_complete = *buf;
 	g_free(buf);
-	int *buf2 = g_malloc0(2);
+	uint16_t *buf2 = g_malloc0(2);
 	serial_read_blocking(serial,buf2,2, serial_timeout(serial,2));
-	int samples_read = *buf2;
-	get_ack(sdi);
+	uint16_t samples_read = *buf2;
+
+	if (get_ack(sdi) != SR_OK)
+		sr_dbg("Failed in knowing capturing status");
 
 	return capturing_complete;
 }
