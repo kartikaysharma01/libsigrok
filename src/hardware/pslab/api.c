@@ -190,7 +190,8 @@ static int config_get(uint32_t key, GVariant **data,
 		break;
 	case SR_CONF_TRIGGER_SOURCE:
 		tmp_str = devc->trigger_channel;
-		*data = (GVariant *) g_strdup(devc->trigger_channel);
+		*data = g_variant_new_string(devc->trigger_channel);
+		sr_dbg("ln 194");
 		break;
 	case SR_CONF_TRIGGER_LEVEL:
 		*data = g_variant_new_double(devc->trigger_voltage);
@@ -213,6 +214,7 @@ static int config_set(uint32_t key, GVariant *data,
 	devc = sdi->priv;
 	switch (key) {
 	case SR_CONF_LIMIT_SAMPLES:
+		sr_dbg("ln 217");
 		return sr_sw_limits_config_set(&devc->limits, key, data);
 	case SR_CONF_SAMPLERATE:
 		devc->samplerate = g_variant_get_uint64(data);
@@ -221,8 +223,9 @@ static int config_set(uint32_t key, GVariant *data,
 		devc->data_source = g_variant_get_boolean(data);
 		break;
 	case SR_CONF_TRIGGER_SOURCE:
+		sr_dbg("ln 226");
 		devc->trigger_enabled = TRUE;
-		g_free(devc->trigger_channel);
+//		g_free(devc->trigger_channel);
 		name = g_variant_get_string(data,NULL);
 		devc->trigger_channel =	g_strdup(name);
 		break;
