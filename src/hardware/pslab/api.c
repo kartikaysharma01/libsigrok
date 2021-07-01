@@ -141,6 +141,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devc->mode = SR_CONF_OSCILLOSCOPE;
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
+		devc->trigger_channel = devc->channel_one_map->name;
 		sdi->priv = devc;
 		devices = g_slist_append(devices, sdi);
 		serial_close(serial);
@@ -189,7 +190,7 @@ static int config_get(uint32_t key, GVariant **data,
 		break;
 	case SR_CONF_TRIGGER_SOURCE:
 		tmp_str = devc->trigger_channel;
-		*data = g_variant_new_string(devc->trigger_channel);
+		*data = (GVariant *) g_strdup(devc->trigger_channel);
 		break;
 	case SR_CONF_TRIGGER_LEVEL:
 		*data = g_variant_new_double(devc->trigger_voltage);
