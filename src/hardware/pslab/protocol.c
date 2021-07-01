@@ -40,7 +40,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	serial = sdi->conn;
 	if (revents == G_IO_IN) {
 		/* Serial data arrived. */
-		short int * buf = g_malloc0(2);
+		uint16_t * buf = g_malloc0(2);
 		serial_read_nonblocking(serial,buf,2);
 		sr_spew("output =%d \n",*buf);
 	}
@@ -167,10 +167,10 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	}
 
-	short int samplecount = devc->limits.limit_samples;
-	short int timegap = (int)(8000000/devc->samplerate);
-	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
-	serial_write_blocking(serial,&timegap, sizeof (timegap), serial_timeout(serial, sizeof (timegap)));
+	int samplecount = devc->limits.limit_samples & 0xff;
+	int timegap = (int)(8000000/devc->samplerate) & 0xff;
+	serial_write_blocking(serial,&samplecount, 2, serial_timeout(serial, 2));
+	serial_write_blocking(serial,&timegap, 2, serial_timeout(serial, 2)));
 
 	if (get_ack(sdi) != SR_OK)
 		sr_dbg("Failed to capture samples");
@@ -185,9 +185,9 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	*commands = RETRIEVE_BUFFER;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	short int startingposition = 0;
-	serial_write_blocking(serial,&startingposition, sizeof (startingposition), serial_timeout(serial, sizeof (startingposition)));
+	serial_write_blocking(serial,&startingposition, 2, serial_timeout(serial, 2));
 	short int samples = samplecount * g_slist_length(devc->enabled_channels);
-	serial_write_blocking(serial,&samples, sizeof (samples), serial_timeout(serial, sizeof (samples)));
+	serial_write_blocking(serial,&samples, 2, serial_timeout(serial,  2));
 //	return SR_OK;
 
 
