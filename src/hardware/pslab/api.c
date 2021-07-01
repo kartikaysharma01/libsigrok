@@ -117,7 +117,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		cg->name = g_strdup("Analog");
 		for (int i = 0; i < NUM_ANALOG_CHANNELS; i++)
 		{
-			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, FALSE, analog_channels[i].name);
+			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
 			struct channel_priv *cp = g_new0(struct channel_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
 			cp->min_input = analog_channels[i].minInput;
