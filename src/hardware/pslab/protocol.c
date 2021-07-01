@@ -167,8 +167,8 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	}
 
-	int samplecount = devc->limits.limit_samples & 0xff;
-	int timegap = (int)(8000000/devc->samplerate) & 0xff;
+	uint16_t samplecount = devc->limits.limit_samples;
+	uint16_t timegap = (int)(8000000/devc->samplerate);
 	serial_write_blocking(serial,&samplecount, 2, serial_timeout(serial, 2));
 	serial_write_blocking(serial,&timegap, 2, serial_timeout(serial, 2)));
 
@@ -184,9 +184,9 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	*commands = RETRIEVE_BUFFER;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	short int startingposition = 0;
+	uint16_t startingposition = 0 ;
 	serial_write_blocking(serial,&startingposition, 2, serial_timeout(serial, 2));
-	short int samples = samplecount * g_slist_length(devc->enabled_channels);
+	uint16_t samples = samplecount * g_slist_length(devc->enabled_channels);
 	serial_write_blocking(serial,&samples, 2, serial_timeout(serial,  2));
 //	return SR_OK;
 
