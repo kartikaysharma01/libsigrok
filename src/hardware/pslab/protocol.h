@@ -58,7 +58,7 @@ struct dev_context {
 	int mode;
 	/* trigger */
 	gboolean trigger_enabled;
-	const struct sr_channel *trigger_channel;
+	char *trigger_channel;
 	double trigger_voltage;
 	/* Acquisition settings */
 	uint64_t samplerate; // Time gap between samples in microseconds

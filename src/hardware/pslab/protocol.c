@@ -314,23 +314,23 @@ SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch,
 
 SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi)
 {
-	struct dev_context *devc = sdi->priv;
-	struct sr_serial_dev_inst *serial = sdi->conn;
-
-	int channel;
-	if(devc->trigger_channel->name == devc->channel_one_map->name)
-		channel = 0;
-	else
-		channel = devc->trigger_channel->index;
-
-	uint8_t *commands = g_malloc0(sizeof(uint8_t));
-	*commands = ADC;
-	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	*commands = CONFIGURE_TRIGGER;
-	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	*commands = (0 << 4) | (1 << channel);
-	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	int level = unscale(devc->trigger_channel,devc->trigger_voltage);
+//	struct dev_context *devc = sdi->priv;
+//	struct sr_serial_dev_inst *serial = sdi->conn;
+//
+//	int channel;
+//	if(devc->trigger_channel->name == devc->channel_one_map->name)
+//		channel = 0;
+//	else
+//		channel = devc->trigger_channel->index;
+//
+//	uint8_t *commands = g_malloc0(sizeof(uint8_t));
+//	*commands = ADC;
+//	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+//	*commands = CONFIGURE_TRIGGER;
+//	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+//	*commands = (0 << 4) | (1 << channel);
+//	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+//	int level = unscale(devc->trigger_channel,devc->trigger_voltage);
 	/* TODO send int */
 //	send_int(level);
 	get_ack(sdi);
