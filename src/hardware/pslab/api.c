@@ -243,21 +243,33 @@ static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
+	struct sr_channel *c;
+	GSList *l;
+	GVariant **tmp;
+	gsize nvalues;
 
-	if (!sdi)
-		return SR_ERR_ARG;
-
-	devc = sdi->priv;
 	switch (key) {
 	case SR_CONF_DEVICE_OPTIONS:
 	case SR_CONF_SCAN_OPTIONS:
 		return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
 	case SR_CONF_TRIGGER_SOURCE:
-		*data = (GVariant *) devc->enabled_channels;
+		if (!sdi) {
+			return SR_ERR_ARG;
+		}
+		devc = sdi->priv;
+		nvalues = g_slist_length(devc->enabled_channels);
+		tmp = g_malloc(nvalues * sizeof(GVariant *));
+		int i = 0;
+		for (l = devc->enabled_channels; l; l = l->next, i++) {
+			c = l->data;
+			tmp[i] = g_variant_new_string(c->name);
+		}
+		*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp,nvalues);
 		break;
 	default:
 		return SR_ERR_NA;
 	}
+	return SR_OK;
 }
 
 static int configure_channels(const struct sr_dev_inst *sdi)
