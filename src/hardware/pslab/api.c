@@ -251,9 +251,6 @@ static int config_list(uint32_t key, GVariant **data,
 {
 	struct dev_context *devc;
 
-	if (!sdi)
-		return SR_ERR_ARG;
-
 	devc = sdi->priv;
 	switch (key) {
 	case SR_CONF_DEVICE_OPTIONS:
