@@ -168,7 +168,7 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 
 		}
-		if(devc->samplerate <= 1000000)
+		if(devc->timegap >= 1)
 		{
 			set_resolution(devc->channel_one_map,12);
 			*commands = CAPTURE_DMASPEED;
@@ -220,15 +220,15 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	}
 
 	uint16_t samplecount = devc->limits.limit_samples;
-	uint16_t timegap = (int)(8000000/devc->samplerate);
+	uint16_t tg = ((uint16_t)((devc->timegap * 8)/8))*8;
 	serial_write_blocking(serial,&samplecount, 2, serial_timeout(serial, 2));
-	serial_write_blocking(serial,&timegap, 2, serial_timeout(serial, 2));
+	serial_write_blocking(serial,&tg, 2, serial_timeout(serial, 2));
 
 	if (get_ack(sdi) != SR_OK)
 		sr_dbg("Failed to capture samples");
 
 	// test
-	g_usleep(1000000 * devc->limits.limit_samples / devc->samplerate);
+	g_usleep(devc->limits.limit_samples * tg );
 
 	while(!progress(sdi))
 		continue;

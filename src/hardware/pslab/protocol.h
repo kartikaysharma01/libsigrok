@@ -28,7 +28,7 @@
 #define LOG_PREFIX "pslab"
 #define NUM_ANALOG_CHANNELS 8
 
-#define DEFAULT_TIMEBASE TIME_500us
+#define NUM_TIMEBASE 11
 #define BUFSIZE 10000
 #define MAX_SAMPLES 10000
 #define COMMON 0x0b
@@ -68,6 +68,7 @@ struct dev_context {
 
 	/* Acquisition settings */
 	uint64_t samplerate;
+	float timegap;
 	gboolean data_source;
 	GSList * enabled_channels;
 	const struct sr_channel *channel_one_map;

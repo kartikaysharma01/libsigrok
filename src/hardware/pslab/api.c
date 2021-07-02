@@ -194,6 +194,10 @@ static int config_get(uint32_t key, GVariant **data,
 	devc = sdi->priv;
 	const char *tmp_str;
 	switch (key) {
+	case SR_CONF_NUM_HDIV:
+		*data = g_variant_new_int32(NUM_TIMEBASE);
+		break;
+
 	case SR_CONF_LIMIT_SAMPLES:
 		return sr_sw_limits_config_get(&devc->limits, key, data);
 	case SR_CONF_SAMPLERATE:
@@ -321,7 +325,7 @@ static int configure_channels(const struct sr_dev_inst *sdi)
 	return SR_OK;
 }
 
-static uint64_t lookup_maximum_samplerate(guint channels, gboolean trigger)
+static double lookup_minimum_timegap(guint channels, gboolean trigger)
 {
 	static const uint64_t channels_idx[][2] = {
 			{1, 0},
@@ -329,15 +333,15 @@ static uint64_t lookup_maximum_samplerate(guint channels, gboolean trigger)
 			{3, 2},
 			{4, 2},
 	};
-	static const uint64_t min_samplerates[][2] = {
-			{2000000, 1333333},
-			{1142857, 1142857},
-			{571428, 571428},
+	static const double min_timegaps[][2] = {
+			{0.5, 0.75},
+			{0.875, 0.875},
+			{1.75, 1.75},
 	};
-	return min_samplerates[channels_idx[channels-1][1]][trigger];
+	return min_timegaps[channels_idx[channels-1][1]][trigger];
 }
 
-static int check_args(guint channels,uint64_t samples ,uint64_t samplerate, gboolean trigger)
+static int check_args(guint channels,uint64_t samples ,float timegap, gboolean trigger)
 {
 	if(channels > 4) {
 		sr_dbg("Number of channels to sample must be 1, 2, 3, or 4");
@@ -349,8 +353,8 @@ static int check_args(guint channels,uint64_t samples ,uint64_t samplerate, gboo
 		return SR_ERR_SAMPLERATE;
 	}
 
-	if(samplerate > lookup_maximum_samplerate(channels, trigger)) {
-		sr_dbg("Samplerate must be less than %lu", lookup_maximum_samplerate(channels, trigger));
+	if(timegap > lookup_minimum_timegap(channels, trigger)) {
+		sr_dbg("Samplerate must be less than %f", lookup_minimum_timegap(channels, trigger));
 		return SR_ERR_ARG;
 	}
 
@@ -376,6 +380,14 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi) {
 
 }
 
+static int calculate_timegap(const struct sr_dev_inst *sdi)
+{
+	struct dev_context *devc = sdi->priv;
+	if(timebases[devc->timebase][1] == 1000000)
+		devc->timegap = (float)(timebases[devc->timebase][0] * 10)/(float)devc->limits.limit_samples;
+	else
+		devc->timegap = (float)((double)timebases[devc->timebase][0] * 10 * 1e3)/(float)devc->limits.limit_samples;
+}
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 {
@@ -396,7 +408,8 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 
 	switch(devc->mode) {
 	case SR_CONF_OSCILLOSCOPE:
-		ret = check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled);
+		calculate_timegap(sdi);
+		ret = check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->timegap, devc->trigger_enabled);
 		if(ret !=SR_OK)
 			return ret;
 		configure_oscilloscope(sdi);
