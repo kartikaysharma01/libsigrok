@@ -142,6 +142,10 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
 		devc->trigger_channel = devc->channel_one_map;
+
+		devc->buffer = g_malloc(devc->limits.limit_samples);
+		devc->data = g_malloc(devc->limits.limit_samples * sizeof(float));
+
 		sdi->priv = devc;
 		devices = g_slist_append(devices, sdi);
 		serial_close(serial);
@@ -354,10 +358,13 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	struct sr_serial_dev_inst *serial;
 	configure_channels(sdi);
 
+	if (!devc->enabled_channels)
+		return SR_ERR;
+
 	if (pslab_init(sdi) != SR_OK)
 		return SR_ERR;
 
-	sr_sw_limits_acquisition_start(&devc->limits);
+//	sr_sw_limits_acquisition_start(&devc->limits);
 	std_session_send_df_header(sdi);
 
 	serial = sdi->conn;
@@ -368,11 +375,12 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 			return SR_ERR_IO;
 		configure_oscilloscope(sdi);
 		caputure_oscilloscope(sdi);
-//		pslab_update_channels(sdi); // configure Oscilloscope
 		break;
 	default:
 		break;
 	}
+
+	devc->channel_entry = devc->enabled_channels;
 
 	serial_source_add(sdi->session, serial, G_IO_IN, 10,
 					  pslab_receive_data, (void *)sdi);

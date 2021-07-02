@@ -56,10 +56,12 @@
 struct dev_context {
 	/* device mode */
 	int mode;
+
 	/* trigger */
 	gboolean trigger_enabled;
 	const struct sr_channel *trigger_channel;
 	double trigger_voltage;
+
 	/* Acquisition settings */
 	uint64_t samplerate; // Time gap between samples in microseconds
 	gboolean data_source;
@@ -69,6 +71,13 @@ struct dev_context {
 	struct sr_sw_limits limits;
 	unsigned char buf[BUFSIZE];
 	int buflen;
+
+	/* GSList entry for the current channel. */
+	GSList *channel_entry;
+
+	/* Acq buffers used for reading from the scope and sending data to app */
+	uint16_t *buffer;
+	double *data;
 };
 
 struct analog_channel {
@@ -107,7 +116,7 @@ SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution);
 SR_PRIV int get_ack(const struct sr_dev_inst *sdi);
 SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi);
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi);
-SR_PRIV void fetch_data(const struct sr_dev_inst *sdi);
+SR_PRIV int fetch_data(const struct sr_dev_inst *sdi);
 SR_PRIV gboolean progress(const struct sr_dev_inst *sdi);
 SR_PRIV double scale(const struct sr_channel *ch, int raw_value);
 SR_PRIV int unscale(const struct sr_channel *ch, double voltage);
