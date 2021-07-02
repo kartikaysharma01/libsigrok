@@ -210,7 +210,9 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 				struct channel_priv *cp = ch->priv;
 				set_resolution(ch,10);
 				cp->samples_in_buffer = devc->limits.limit_samples;
-				cp->buffer_idx = (i + 1) * (int)devc->limits.limit_samples;
+				/* TODO : we are assuming that in user will always give channels starting from 1 *
+				 * sampling from CH2, cH3 is not possible */
+				cp->buffer_idx = i * (int)devc->limits.limit_samples;
 			}
 		}
 		*commands = CAPTURE_FOUR;
