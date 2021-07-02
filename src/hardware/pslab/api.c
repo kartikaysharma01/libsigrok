@@ -353,7 +353,7 @@ static int check_args(guint channels,uint64_t samples ,float timegap, gboolean t
 		return SR_ERR_SAMPLERATE;
 	}
 
-	if(timegap > lookup_minimum_timegap(channels, trigger)) {
+	if(timegap < lookup_minimum_timegap(channels, trigger)) {
 		sr_dbg("Samplerate must be less than %f", lookup_minimum_timegap(channels, trigger));
 		return SR_ERR_ARG;
 	}
@@ -387,6 +387,7 @@ static int calculate_timegap(const struct sr_dev_inst *sdi)
 		devc->timegap = (float)(timebases[devc->timebase][0] * 10)/(float)devc->limits.limit_samples;
 	else
 		devc->timegap = (float)((double)timebases[devc->timebase][0] * 10 * 1e3)/(float)devc->limits.limit_samples;
+	sr_dbg("timegap = %s", devc->timegap);
 }
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
