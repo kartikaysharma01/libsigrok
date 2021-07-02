@@ -21,7 +21,7 @@
 #include <math.h>
 #include "protocol.h"
 
-static const uint64_t GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
+static const uint8_t GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
 
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 {
@@ -64,6 +64,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 		sr_dbg("ln 59, raw value == %d , and voltage == %f ", *devc->short_int_buffer, scale(ch, *devc->short_int_buffer));
 		devc->data[i] = scale(ch, *devc->short_int_buffer);
 	}
+	get_ack(sdi);
 
 	sr_analog_init(&analog, &encoding, &meaning, &spec, 6);
 	analog.meaning->channels = g_slist_append(NULL, ch);
@@ -183,17 +184,14 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 		}
 	}
-	else if(g_slist_length(devc->enabled_channels) == 2)
-	{
-		for(l=devc->enabled_channels; l; l=l->next)
-		{
+	else if(g_slist_length(devc->enabled_channels) == 2) {
+		for(l=devc->enabled_channels; l; l=l->next) {
 			struct sr_channel *ch = l->data;
-			if(!g_strcmp0(ch->name, "CH2"))
-			{
+			if(!g_strcmp0(ch->name, "CH2")) {
 				struct channel_priv *cp = ch->priv;
 				set_resolution(ch,10);
 				cp->samples_in_buffer = devc->limits.limit_samples;
-				cp->buffer_idx = devc->limits.limit_samples;
+				cp->buffer_idx = (int)devc->limits.limit_samples;
 				break;
 			}
 		}
@@ -380,10 +378,10 @@ SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch,
 	struct sr_serial_dev_inst *serial = sdi->conn;
 	struct channel_priv *cp = ch->priv;
 	cp->gain = gain;
-	int pga = cp->programmable_gain_amplifier;
-	int gain_idx = std_u64_idx(g_variant_new_uint64(gain), GAIN_VALUES, 8);
+	uint8_t pga = cp->programmable_gain_amplifier;
+	uint8_t gain_idx = std_u8_idx(g_variant_new_uint64(gain), GAIN_VALUES, 8);
 
-	if(gain_idx == -1) {
+	if(gain_idx < 0) {
 		sr_dbg("Invalid gain value");
 		return SR_ERR_ARG;
 	}
