@@ -56,7 +56,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	if(fetch_data(sdi) != SR_OK)
 		return TRUE;
 
-	serial_read_blocking(serial, devc->buffer, 2 * devc->limits.limit_samples, serial_timeout(serial, 2 * (int)devc->limits.limit_samples));
+	serial_read_blocking(serial, devc->buffer, 2 , serial_timeout(serial, 2 ));
 
 	for (i = 0; i < (int)devc->limits.limit_samples; i++) {
 		sr_dbg("ln 59, raw value == %d , and voltage == %f ", devc->buffer[i], scale(ch, devc->buffer[i]));
@@ -270,7 +270,7 @@ SR_PRIV int fetch_data(const struct sr_dev_inst *sdi)
 	ch = devc->channel_entry->data;
 	serial = sdi->conn;
 
-	sr_dbg("Starting reading data from channel %d", ch->index + 1);
+	sr_dbg("Starting reading data from channel %s", ch->name);
 
 	uint8_t *commands;
 	commands = g_malloc0(sizeof(uint8_t));
