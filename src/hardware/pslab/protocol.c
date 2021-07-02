@@ -56,7 +56,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	if(fetch_data(sdi) != SR_OK)
 		return TRUE;
 
-	serial_read_blocking(serial, devc->buffer, 2 , serial_timeout(serial, 2 ));
+	serial_read_blocking(serial, &devc->buffer, 2*devc->limits.limit_samples , serial_timeout(serial, 2*(int)devc->limits.limit_samples ));
 
 	for (i = 0; i < (int)devc->limits.limit_samples; i++) {
 		sr_dbg("ln 59, raw value == %d , and voltage == %f ", devc->buffer[i], scale(ch, devc->buffer[i]));
