@@ -143,7 +143,6 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devc->trigger_voltage = 0;
 		devc->trigger_channel = devc->channel_one_map;
 
-		devc->buffer = g_malloc(devc->limits.limit_samples);
 		devc->data = g_malloc(devc->limits.limit_samples * sizeof(float));
 
 		sdi->priv = devc;
@@ -321,7 +320,7 @@ static int check_args(guint channels,uint64_t samples ,uint64_t samplerate, gboo
 
 	if(samples < 0 || samples > (MAX_SAMPLES/channels)) {
 		sr_dbg("Invalid number of samples");
-		return SR_ERR_ARG;
+		return SR_ERR_SAMPLERATE;
 	}
 
 	if(samplerate > lookup_maximum_samplerate(channels, trigger)) {
@@ -354,6 +353,7 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi) {
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 {
+	int ret;
 	struct dev_context *devc = sdi->priv;
 	struct sr_serial_dev_inst *serial;
 	configure_channels(sdi);
@@ -364,15 +364,15 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	if (pslab_init(sdi) != SR_OK)
 		return SR_ERR;
 
-//	sr_sw_limits_acquisition_start(&devc->limits);
-	std_session_send_df_header(sdi);
+	sr_sw_limits_acquisition_start(&devc->limits);
 
 	serial = sdi->conn;
 
 	switch(devc->mode) {
 	case SR_CONF_OSCILLOSCOPE:
-		if(check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled) !=SR_OK)
-			return SR_ERR_IO;
+		ret = check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled);
+		if(ret !=SR_OK)
+			return ret;
 		configure_oscilloscope(sdi);
 		caputure_oscilloscope(sdi);
 		break;
@@ -381,18 +381,10 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	}
 
 	devc->channel_entry = devc->enabled_channels;
+	std_session_send_df_header(sdi);
 
 	serial_source_add(sdi->session, serial, G_IO_IN, 10,
 					  pslab_receive_data, (void *)sdi);
-
-	return SR_OK;
-}
-
-static int dev_acquisition_stop(struct sr_dev_inst *sdi)
-{
-	/* TODO: stop acquisition. */
-
-	(void)sdi;
 
 	return SR_OK;
 }
@@ -412,7 +404,7 @@ static struct sr_dev_driver pslab_driver_info = {
 	.dev_open = std_serial_dev_open,
 	.dev_close = std_serial_dev_close,
 	.dev_acquisition_start = dev_acquisition_start,
-	.dev_acquisition_stop = dev_acquisition_stop,
+	.dev_acquisition_stop = std_serial_dev_acquisition_stop,
 	.context = NULL,
 };
 SR_REGISTER_DEV_DRIVER(pslab_driver_info);

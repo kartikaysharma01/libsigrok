@@ -56,20 +56,26 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	if(fetch_data(sdi) != SR_OK)
 		return TRUE;
 
-	serial_read_blocking(serial, &devc->buffer, 2*devc->limits.limit_samples , serial_timeout(serial, 2*(int)devc->limits.limit_samples ));
+	devc->short_int_buffer = g_malloc(2);
+	devc->data = g_malloc0((int)devc->limits.limit_samples * sizeof(double));
 
 	for (i = 0; i < (int)devc->limits.limit_samples; i++) {
-		sr_dbg("ln 59, raw value == %d , and voltage == %f ", devc->buffer[i], scale(ch, devc->buffer[i]));
-		devc->data[i] = scale(ch, devc->buffer[i]);
+		serial_read_blocking(serial, devc->short_int_buffer, 2 , serial_timeout(serial, 2));
+		sr_dbg("ln 59, raw value == %d , and voltage == %f ", *devc->short_int_buffer, scale(ch, *devc->short_int_buffer));
+		devc->data[i] = scale(ch, *devc->short_int_buffer);
 	}
 
-	sr_analog_init(&analog, &encoding, &meaning, &spec, 4);
+	sr_analog_init(&analog, &encoding, &meaning, &spec, 6);
 	analog.meaning->channels = g_slist_append(NULL, ch);
-	analog.num_samples = len;
+	analog.num_samples = devc->limits.limit_samples;
 	analog.data = devc->data;
 	analog.meaning->mq = SR_MQ_VOLTAGE;
 	analog.meaning->unit = SR_UNIT_VOLT;
 	analog.meaning->mqflags = 0;
+	analog.encoding->unitsize = sizeof(double);
+	analog.encoding->is_float = TRUE;
+	analog.encoding->is_signed = TRUE;
+
 	packet.type = SR_DF_ANALOG;
 	packet.payload = &analog;
 	sr_session_send(sdi, &packet);
@@ -78,7 +84,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	if (devc->channel_entry->next) {
 		/* We got the frame for this channel, now get the next channel. */
 		devc->channel_entry = devc->channel_entry->next;
-		fetch_data(sdi);
+//		fetch_data(sdi);
 	} else {
 		/* Done with this frame. */
 		std_session_send_df_frame_end(sdi);
@@ -263,7 +269,6 @@ SR_PRIV int fetch_data(const struct sr_dev_inst *sdi)
 	struct sr_channel *ch;
 	struct sr_serial_dev_inst *serial;
 
-
 	if (!(devc = sdi->priv))
 		return SR_ERR;
 
@@ -279,6 +284,7 @@ SR_PRIV int fetch_data(const struct sr_dev_inst *sdi)
 	*commands = RETRIEVE_BUFFER;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	uint16_t startingposition =  ((struct channel_priv *)(ch->priv))->buffer_idx;
+	sr_dbg("ln 287 %hu", startingposition);
 	serial_write_blocking(serial,&startingposition, 2, serial_timeout(serial, 2));
 	uint16_t samples = devc->limits.limit_samples ;
 	serial_write_blocking(serial,&samples, 2, serial_timeout(serial,  2));

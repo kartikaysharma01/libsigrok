@@ -76,7 +76,7 @@ struct dev_context {
 	GSList *channel_entry;
 
 	/* Acq buffers used for reading from the scope and sending data to app */
-	uint16_t *buffer;
+	uint16_t *short_int_buffer;
 	double *data;
 };
 
