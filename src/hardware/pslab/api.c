@@ -33,10 +33,28 @@ static const uint32_t drvopts[] = {
 static const uint32_t devopts[] = {
 		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET,
 		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_TIMEBASE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+		SR_CONF_NUM_HDIV | SR_CONF_GET,
 //		SR_CONF_HORIZ_TRIGGERPOS | SR_CONF_SET,
 		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 		SR_CONF_TRIGGER_LEVEL | SR_CONF_GET | SR_CONF_SET,
 		SR_CONF_DATA_SOURCE | SR_CONF_GET | SR_CONF_SET,
+};
+
+static const uint64_t timebases[][2] = {
+		/* microseconds */
+		{ 500, 1000000 },
+		{ 875, 1000000 },
+		/* milliseconds */
+		{ 1, 1000 },
+		{ 2, 1000 },
+		{ 4, 1000 },
+		{ 5, 1000 },
+		{ 8, 1000 },
+		{ 10, 1000 },
+		{ 20, 1000 },
+		{ 25, 1000 },
+		{ 50, 1000 },
 };
 
 static const struct analog_channel analog_channels[] = {
@@ -115,8 +133,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 
 		struct sr_channel_group *cg = g_new0(struct sr_channel_group, 1);
 		cg->name = g_strdup("Analog");
-		for (int i = 0; i < NUM_ANALOG_CHANNELS; i++)
-		{
+		for (int i = 0; i < NUM_ANALOG_CHANNELS; i++) {
 			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
 			struct channel_priv *cp = g_new0(struct channel_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
@@ -124,13 +141,10 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			cp->max_input = analog_channels[i].maxInput;
 			cp->gain = 1;
 			cp->resolution = pow(2, 10) - 1;
-			if (!g_strcmp0(analog_channels[i].name, "CH1"))
-			{
+			if (!g_strcmp0(analog_channels[i].name, "CH1")) {
 				cp->programmable_gain_amplifier = 1;
 				devc->channel_one_map = ch;
-			}
-			else if (!g_strcmp0(analog_channels[i].name, "CH2"))
-			{
+			} else if (!g_strcmp0(analog_channels[i].name, "CH2")) {
 				cp->programmable_gain_amplifier = 2;
 			}
 			ch->priv = cp;
@@ -142,7 +156,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
 		devc->trigger_channel = devc->channel_one_map;
-
+		devc->timebase = 0;
 		devc->data = g_malloc(devc->limits.limit_samples * sizeof(float));
 
 		sdi->priv = devc;
@@ -198,6 +212,9 @@ static int config_get(uint32_t key, GVariant **data,
 	case SR_CONF_TRIGGER_LEVEL:
 		*data = g_variant_new_double(devc->trigger_voltage);
 		break;
+	case SR_CONF_TIMEBASE:
+		*data = g_variant_new("(tt)", timebases[devc->timebase][0], timebases[devc->timebase][1]);
+		break;
 	default:
 		return SR_ERR_NA;
 	}
@@ -209,6 +226,7 @@ static int config_set(uint32_t key, GVariant *data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
+	int idx;
 
 	(void)cg;
 	const char *name;
@@ -234,6 +252,11 @@ static int config_set(uint32_t key, GVariant *data,
 	case SR_CONF_TRIGGER_LEVEL:
 		devc->trigger_enabled = TRUE;
 		devc->trigger_voltage = g_variant_get_double(data);
+		break;
+	case SR_CONF_TIMEBASE:
+		if ((idx = std_u64_tuple_idx(data, ARRAY_AND_SIZE(timebases))) < 0)
+			return SR_ERR_ARG;
+		devc->timebase = idx;
 		break;
 	default:
 		return SR_ERR_NA;
@@ -268,6 +291,9 @@ static int config_list(uint32_t key, GVariant **data,
 			tmp[i] = g_variant_new_string(c->name);
 		}
 		*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp,nvalues);
+		break;
+	case SR_CONF_TIMEBASE:
+		*data = std_gvar_tuple_array(ARRAY_AND_SIZE(timebases));
 		break;
 	default:
 		return SR_ERR_NA;

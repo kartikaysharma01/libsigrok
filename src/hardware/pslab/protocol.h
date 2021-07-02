@@ -28,6 +28,7 @@
 #define LOG_PREFIX "pslab"
 #define NUM_ANALOG_CHANNELS 8
 
+#define DEFAULT_TIMEBASE TIME_500us
 #define BUFSIZE 10000
 #define MAX_SAMPLES 10000
 #define COMMON 0x0b
@@ -62,8 +63,11 @@ struct dev_context {
 	const struct sr_channel *trigger_channel;
 	double trigger_voltage;
 
+	/* Oscilloscope settings. */
+	int timebase;
+
 	/* Acquisition settings */
-	uint64_t samplerate; // Time gap between samples in microseconds
+	uint64_t samplerate;
 	gboolean data_source;
 	GSList * enabled_channels;
 	const struct sr_channel *channel_one_map;
