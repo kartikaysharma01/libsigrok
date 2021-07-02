@@ -21,6 +21,12 @@
 #include <math.h>
 #include "protocol.h"
 
+static const uint64_t samplerates[] = {
+		SR_HZ(1),
+		SR_HZ(2000000),
+		SR_HZ(1),
+};
+
 static const uint32_t scanopts[] = {
 		SR_CONF_CONN,
 		SR_CONF_SERIALCOMM,
@@ -32,7 +38,7 @@ static const uint32_t drvopts[] = {
 
 static const uint32_t devopts[] = {
 		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET,
-		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 //		SR_CONF_HORIZ_TRIGGERPOS | SR_CONF_SET,
 		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 		SR_CONF_TRIGGER_LEVEL | SR_CONF_GET | SR_CONF_SET,
@@ -255,6 +261,9 @@ static int config_list(uint32_t key, GVariant **data,
 	case SR_CONF_DEVICE_OPTIONS:
 	case SR_CONF_SCAN_OPTIONS:
 		return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
+		case SR_CONF_SAMPLERATE:
+			*data = std_gvar_samplerates_steps(ARRAY_AND_SIZE(samplerates));
+			break;
 	case SR_CONF_TRIGGER_SOURCE:
 		if (!sdi) {
 			return SR_ERR_ARG;
