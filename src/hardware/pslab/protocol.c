@@ -57,11 +57,11 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 		return TRUE;
 
 	devc->short_int_buffer = g_malloc(2);
-	devc->data = g_malloc0((int)devc->limits.limit_samples * sizeof(float ));
+	devc->data = g_malloc0((int)devc->limits.limit_samples * sizeof(float));
 
 	for (i = 0; i < (int)devc->limits.limit_samples; i++) {
 		serial_read_blocking(serial, devc->short_int_buffer, 2 , serial_timeout(serial, 2));
-//		sr_dbg("ln 59, raw value == %d , and voltage == %f ", *devc->short_int_buffer, scale(ch, *devc->short_int_buffer));
+		sr_dbg("ln 59, raw value == %d , and voltage == %f ", *devc->short_int_buffer, scale(ch, *devc->short_int_buffer));
 		devc->data[i] = scale(ch, *devc->short_int_buffer);
 	}
 	get_ack(sdi);
@@ -428,14 +428,14 @@ SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi)
 	get_ack(sdi);
 }
 
-SR_PRIV float scale(const struct sr_channel *ch, int raw_value)
+SR_PRIV float scale(const struct sr_channel *ch, uint16_t raw_value)
 {
 	sr_dbg("ln 433, in to scale raw value == %d", raw_value);
 	struct channel_priv *cp = ch->priv;
 	float slope = (float)((cp->max_input - cp->min_input) / cp->resolution * cp->gain);
 	float intercept = (float)(cp->min_input/cp->gain);
 	float x = slope * raw_value + intercept;
-	sr_dbg("ln 438 scaled %d to voltage == %f", raw_value, x)
+	sr_dbg("ln 438 scaled %d to voltage == %f", raw_value, x);
 	return slope * raw_value + intercept;
 }
 

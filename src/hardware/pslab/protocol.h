@@ -118,7 +118,7 @@ SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi);
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi);
 SR_PRIV int fetch_data(const struct sr_dev_inst *sdi);
 SR_PRIV gboolean progress(const struct sr_dev_inst *sdi);
-SR_PRIV float scale(const struct sr_channel *ch, int raw_value);
+SR_PRIV float scale(const struct sr_channel *ch, uint16_t raw_value);
 SR_PRIV int unscale(const struct sr_channel *ch, double voltage);
 SR_PRIV struct dev_context *pslab_dev_new();
 
