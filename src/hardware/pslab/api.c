@@ -348,8 +348,10 @@ static int configure_oscilloscope(const struct sr_dev_inst *sdi) {
 	for (l = devc->enabled_channels; l; l = l->next) {
 		ch = l->data;
 		// can only sample from CH1, CH2, CH3 and MIC
-		if (!(ch->name[2]=='C' || ch->name[2]<'4'))
+		if (!(ch->name[2]=='C' || ch->name[2]<'4')) {
+			sr_spew("Can not sample from channel %s", ch->name);
 			return SR_ERR_ARG;
+		}
 		set_gain(sdi, ch, 1);
 		if (g_slist_length(devc->enabled_channels) == 1)
 			devc->channel_one_map = ch;
