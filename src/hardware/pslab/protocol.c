@@ -57,7 +57,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 		return TRUE;
 
 	devc->short_int_buffer = g_malloc(2);
-	devc->data = g_malloc0((int)devc->limits.limit_samples * sizeof(double));
+	devc->data = g_malloc0((int)devc->limits.limit_samples * sizeof(float ));
 
 	for (i = 0; i < (int)devc->limits.limit_samples; i++) {
 		serial_read_blocking(serial, devc->short_int_buffer, 2 , serial_timeout(serial, 2));
