@@ -329,12 +329,12 @@ static int check_args(guint channels,uint64_t samples ,uint64_t samplerate, gboo
 
 	if(samples < 0 || samples > (MAX_SAMPLES/channels)) {
 		sr_dbg("Invalid number of samples");
-		return SR_ERR_SAMPLERATE;
+		return SR_ERR_ARG;
 	}
 
 	if(samplerate > lookup_maximum_samplerate(channels, trigger)) {
 		sr_dbg("Samplerate must be less than %lu", lookup_maximum_samplerate(channels, trigger));
-		return SR_ERR_ARG;
+		return SR_ERR_SAMPLERATE;
 	}
 
 	return SR_OK;
