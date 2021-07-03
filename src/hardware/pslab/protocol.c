@@ -428,12 +428,12 @@ SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi)
 	get_ack(sdi);
 }
 
-SR_PRIV double scale(const struct sr_channel *ch, int raw_value)
+SR_PRIV float scale(const struct sr_channel *ch, int raw_value)
 {
 	struct channel_priv *cp = ch->priv;
-	double slope = (cp->max_input/cp->gain - cp->min_input/cp->gain) / cp->resolution;
-	double intercept = cp->min_input/cp->gain;
-	return slope * raw_value + intercept;
+	float slope = (float)((cp->max_input - cp->min_input) / cp->resolution * (double)cp->gain);
+	float intercept = (float)(cp->min_input/(double)cp->gain);
+	return slope * (float)raw_value + intercept;
 }
 
 SR_PRIV int unscale(const struct sr_channel *ch, double voltage)

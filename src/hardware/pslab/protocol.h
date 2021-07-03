@@ -77,7 +77,7 @@ struct dev_context {
 
 	/* Acq buffers used for reading from the scope and sending data to app */
 	uint16_t *short_int_buffer;
-	double *data;
+	float *data;
 };
 
 struct analog_channel {
@@ -118,7 +118,7 @@ SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi);
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi);
 SR_PRIV int fetch_data(const struct sr_dev_inst *sdi);
 SR_PRIV gboolean progress(const struct sr_dev_inst *sdi);
-SR_PRIV double scale(const struct sr_channel *ch, int raw_value);
+SR_PRIV float scale(const struct sr_channel *ch, int raw_value);
 SR_PRIV int unscale(const struct sr_channel *ch, double voltage);
 SR_PRIV struct dev_context *pslab_dev_new();
 
