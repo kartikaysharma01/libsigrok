@@ -73,7 +73,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	analog.meaning->mq = SR_MQ_VOLTAGE;
 	analog.meaning->unit = SR_UNIT_VOLT;
 	analog.meaning->mqflags = 0;
-	analog.encoding->unitsize = sizeof(double);
+	analog.encoding->unitsize = sizeof(float);
 	analog.encoding->is_float = TRUE;
 	analog.encoding->is_signed = TRUE;
 
