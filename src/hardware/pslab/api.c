@@ -334,19 +334,22 @@ static int check_args(guint channels,uint64_t samples ,uint64_t samplerate, gboo
 
 	if(samplerate > lookup_maximum_samplerate(channels, trigger)) {
 		sr_dbg("Samplerate must be less than %lu", lookup_maximum_samplerate(channels, trigger));
-		return SR_ERR_ARG;
+		return SR_ERR_SAMPLERATE;
 	}
 
 	return SR_OK;
 }
 
-static void configure_oscilloscope(const struct sr_dev_inst *sdi) {
+static int configure_oscilloscope(const struct sr_dev_inst *sdi) {
 	GSList *l;
 	struct dev_context *devc = sdi->priv;
 	struct sr_channel *ch;
 
 	for (l = devc->enabled_channels; l; l = l->next) {
 		ch = l->data;
+		// can only sample from CH1, CH2, CH3 and MIC
+		if (!(ch->name[2]=='C' || ch->name[2]<'4'))
+			return SR_ERR_ARG;
 		set_gain(sdi, ch, 1);
 		if (g_slist_length(devc->enabled_channels) == 1)
 			devc->channel_one_map = ch;
@@ -357,6 +360,7 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi) {
 	if(devc->trigger_enabled)
 		configure_trigger(sdi);
 
+	return SR_OK;
 }
 
 
@@ -382,7 +386,8 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 		ret = check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled);
 		if(ret !=SR_OK)
 			return ret;
-		configure_oscilloscope(sdi);
+		if(configure_oscilloscope(sdi) != SR_OK)
+			return SR_ERR_ARG;
 		caputure_oscilloscope(sdi);
 		break;
 	default:
