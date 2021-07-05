@@ -58,17 +58,20 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 
 	devc->short_int_buffer = g_malloc(2);
 	devc->data = g_malloc0((int)devc->limits.limit_samples * sizeof(float));
+	int samples_collected =0;
 
 	for (i = 0; i < (int)devc->limits.limit_samples; i++) {
-		serial_read_blocking(serial, devc->short_int_buffer, 2 , serial_timeout(serial, 2));
+		if(serial_read_blocking(serial, devc->short_int_buffer, 2 , serial_timeout(serial, 2)) < 2)
+			break;
 		sr_dbg("ln 59, raw value == %d , and voltage == %f ", *devc->short_int_buffer, scale(ch, *devc->short_int_buffer));
 		devc->data[i] = scale(ch, *devc->short_int_buffer);
+		samples_collected = i;
 	}
 	get_ack(sdi);
 
 	sr_analog_init(&analog, &encoding, &meaning, &spec, 6);
 	analog.meaning->channels = g_slist_append(NULL, ch);
-	analog.num_samples = devc->limits.limit_samples;
+	analog.num_samples = samples_collected + 1;
 	analog.data = devc->data;
 	analog.meaning->mq = SR_MQ_VOLTAGE;
 	analog.meaning->unit = SR_UNIT_VOLT;
