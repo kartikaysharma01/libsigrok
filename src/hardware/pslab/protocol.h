@@ -52,6 +52,7 @@
 #define SET_LO_CAPTURE 0x10
 
 #define RETRIEVE_BUFFER 0x08
+#define CLEAR_BUFFER 0x0a
 
 struct dev_context {
 	/* device mode */
@@ -116,6 +117,7 @@ SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution);
 SR_PRIV int get_ack(const struct sr_dev_inst *sdi);
 SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi);
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi);
+SR_PRIV int clear_buffer(const struct sr_dev_inst *sdi);
 SR_PRIV int fetch_data(const struct sr_dev_inst *sdi);
 SR_PRIV gboolean progress(const struct sr_dev_inst *sdi);
 SR_PRIV double scale(const struct sr_channel *ch, int raw_value);

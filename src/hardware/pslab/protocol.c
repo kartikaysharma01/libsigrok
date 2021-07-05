@@ -139,8 +139,32 @@ SR_PRIV int pslab_update_vdiv(const struct sr_dev_inst *sdi)
 	return SR_OK;
 }
 
+SR_PRIV int clear_buffer(const struct sr_dev_inst *sdi)
+{
+	struct sr_serial_dev_inst *serial;
+	serial = sdi->conn;
+
+	uint8_t *commands;
+	commands = g_malloc0(sizeof(uint8_t));
+	*commands = COMMON;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	*commands = CLEAR_BUFFER;
+	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	uint16_t starting_position = 0;
+	serial_write_blocking(serial,&starting_position, 2, serial_timeout(serial, 2));
+	uint16_t samples = MAX_SAMPLES;
+	serial_write_blocking(serial,&samples, 2, serial_timeout(serial, 2));
+
+	if(get_ack(sdi) != SR_OK)
+		sr_dbg("Failed to clear buffer");
+	else
+		sr_dbg("successfully cleared buffer");
+
+}
+
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 {
+	clear_buffer(sdi);
 	// invalidate_buffer()
 	struct dev_context *devc = sdi->priv;
 	struct sr_serial_dev_inst *serial = sdi->conn;
