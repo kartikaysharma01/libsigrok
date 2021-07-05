@@ -127,6 +127,8 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			*commands = CAPTURE_DMASPEED;
 			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 			*commands = chosa;
+			sr_dbg("ln 138. chosa == %d",chosa);
+			sr_dbg("ln 138. cmd chosa == %d",*commands);
 			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 		}
 	}
@@ -169,7 +171,8 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	}
 
 	uint16_t samplecount = devc->limits.limit_samples;
-	uint16_t timegap = (int)(8000000/devc->samplerate);
+	uint16_t timegap = (uint16_t)(8000000/devc->samplerate);
+	sr_dbg("ln 175, send timegap to device, %d",timegap);
 	serial_write_blocking(serial,&samplecount, 2, serial_timeout(serial, 2));
 	serial_write_blocking(serial,&timegap, 2, serial_timeout(serial, 2));
 
