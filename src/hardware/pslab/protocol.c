@@ -56,12 +56,12 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	if(fetch_data(sdi) != SR_OK)
 		return TRUE;
 
-	devc->short_int_buffer = g_malloc(2);
 	devc->data = g_malloc0((int)devc->limits.limit_samples * sizeof(double));
 
 	for (i = 0; i < (int)devc->limits.limit_samples; i++) {
-		if( serial_read_blocking(serial, devc->short_int_buffer, 2 , serial_timeout(serial, 2)) < 2) {
-			sr_dbg("ln 59, raw value == %d , and voltage == %f , count == %d", *devc->short_int_buffer, scale(ch, *devc->short_int_buffer), i);
+		devc->short_int_buffer = g_malloc(2);
+		if( serial_read_nonblocking(serial, devc->short_int_buffer, 2) < 2) {
+			sr_dbg("ln 59, DID NOT READ 2 VALUES raw value == %d , and voltage == %f , count == %d", *devc->short_int_buffer, scale(ch, *devc->short_int_buffer), i);
 			continue;
 		}
 		sr_dbg("ln 59, raw value == %d , and voltage == %f , count == %d", *devc->short_int_buffer, scale(ch, *devc->short_int_buffer), i);
