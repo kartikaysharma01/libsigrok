@@ -65,7 +65,6 @@ struct dev_context {
 
 	/* Acquisition settings */
 	uint64_t samplerate; // Time gap between samples in microseconds
-	gboolean data_source;
 	GSList * enabled_channels;
 	const struct sr_channel *channel_one_map;
 	gboolean ch_enabled[NUM_ANALOG_CHANNELS];

@@ -42,7 +42,6 @@ static const uint32_t devopts[] = {
 //		SR_CONF_HORIZ_TRIGGERPOS | SR_CONF_SET,
 		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 		SR_CONF_TRIGGER_LEVEL | SR_CONF_GET | SR_CONF_SET,
-		SR_CONF_DATA_SOURCE | SR_CONF_GET | SR_CONF_SET,
 };
 
 static const struct analog_channel analog_channels[] = {
@@ -191,12 +190,6 @@ static int config_get(uint32_t key, GVariant **data,
 	case SR_CONF_SAMPLERATE:
 		*data = g_variant_new_uint64(devc->samplerate);
 		break;
-	case SR_CONF_DATA_SOURCE:
-		if (devc->data_source)
-			*data = g_variant_new_string("Live");
-		else
-			*data = g_variant_new_string("Memory");
-		break;
 	case SR_CONF_TRIGGER_SOURCE:
 		tmp_str = devc->trigger_channel->name;
 		*data = g_variant_new_string(tmp_str);
@@ -225,9 +218,6 @@ static int config_set(uint32_t key, GVariant *data,
 		return sr_sw_limits_config_set(&devc->limits, key, data);
 	case SR_CONF_SAMPLERATE:
 		devc->samplerate = g_variant_get_uint64(data);
-		break;
-	case SR_CONF_DATA_SOURCE:
-		devc->data_source = g_variant_get_boolean(data);
 		break;
 	case SR_CONF_TRIGGER_SOURCE:
 		devc->trigger_enabled = TRUE;
