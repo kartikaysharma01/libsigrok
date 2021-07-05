@@ -22,8 +22,8 @@
 #include "protocol.h"
 
 static const uint64_t samplerates[] = {
-		SR_HZ(1),
-		SR_HZ(2000000),
+		SR_KHZ(1),
+		SR_MHZ(2),
 		SR_HZ(1),
 };
 
