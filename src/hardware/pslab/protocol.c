@@ -61,7 +61,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 
 	for (i = 0; i < (int)devc->limits.limit_samples; i++) {
 		serial_read_blocking(serial, devc->short_int_buffer, 2 , serial_timeout(serial, 2));
-		sr_dbg("ln 59, raw value == %d , and voltage == %f ", *devc->short_int_buffer, scale(ch, *devc->short_int_buffer));
+		sr_dbg("ln 59, raw value == %d , and voltage == %f , count == %d", *devc->short_int_buffer, scale(ch, *devc->short_int_buffer), i);
 		devc->data[i] = scale(ch, *devc->short_int_buffer);
 	}
 	get_ack(sdi);
