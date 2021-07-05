@@ -198,7 +198,7 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 		uint16_t *buf2 = g_malloc0(2);
 		serial_read_blocking(serial,buf2,2, serial_timeout(serial,2));
 		uint16_t output = *buf2;
-		sr_dbg("ln 198 output == %d, count ==", output, i);
+		sr_dbg("ln 198 output == %d, count == %d", output, i);
 	}
 
 	if (get_ack(sdi) == SR_OK)
