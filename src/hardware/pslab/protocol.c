@@ -179,7 +179,7 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 		sr_dbg("Failed to capture samples");
 
 	// test
-	g_usleep(100000000000000000 * devc->limits.limit_samples );
+	g_usleep(1000000 * devc->limits.limit_samples );
 
 //	while(!progress(sdi))
 //		continue;
