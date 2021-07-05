@@ -37,7 +37,7 @@ static const uint32_t drvopts[] = {
 };
 
 static const uint32_t devopts[] = {
-		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 //		SR_CONF_HORIZ_TRIGGERPOS | SR_CONF_SET,
 		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
@@ -277,6 +277,9 @@ static int config_list(uint32_t key, GVariant **data,
 			tmp[i] = g_variant_new_string(c->name);
 		}
 		*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp,nvalues);
+		break;
+	case SR_CONF_LIMIT_SAMPLES:
+		*data = std_gvar_tuple_u64(MIN_SAMPLES, MAX_SAMPLES);
 		break;
 	default:
 		return SR_ERR_NA;

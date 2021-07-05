@@ -32,6 +32,7 @@
 #define MAX_SAMPLES 10000
 #define COMMON 0x0b
 #define VERSION_COMMAND 0x05
+#define MIN_SAMPLES 10
 
 #define ADC 0x02
 #define CAPTURE_ONE 0x01
