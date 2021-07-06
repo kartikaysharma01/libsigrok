@@ -146,7 +146,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devc->mode = SR_CONF_OSCILLOSCOPE;
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
-		devc->trigger_channel = devc->channel_one_map;
+//		devc->trigger_channel = devc->channel_one_map;
 
 		devc->data = g_malloc(devc->limits.limit_samples * sizeof(float));
 
@@ -183,7 +183,6 @@ static int config_get(uint32_t key, GVariant **data,
 		return SR_ERR_ARG;
 
 	devc = sdi->priv;
-	const char *tmp_str;
 	switch (key) {
 	case SR_CONF_LIMIT_SAMPLES:
 		return sr_sw_limits_config_get(&devc->limits, key, data);
@@ -191,8 +190,7 @@ static int config_get(uint32_t key, GVariant **data,
 		*data = g_variant_new_uint64(devc->samplerate);
 		break;
 	case SR_CONF_TRIGGER_SOURCE:
-		tmp_str = devc->trigger_channel->name;
-		*data = g_variant_new_string(tmp_str);
+		*data = g_variant_new_string(devc->trigger_channel->name);
 		break;
 	case SR_CONF_TRIGGER_LEVEL:
 		*data = g_variant_new_double(devc->trigger_voltage);
@@ -222,10 +220,11 @@ static int config_set(uint32_t key, GVariant *data,
 	case SR_CONF_TRIGGER_SOURCE:
 		devc->trigger_enabled = TRUE;
 		name = g_variant_get_string(data,0);
-		if(!assign_channel(name, devc->trigger_channel,devc->enabled_channels)) {
-			sr_dbg("Channel %s can not be sampled",name);
+		if (!(name[2]=='C' || name[2]<'4')) {
+			sr_spew("Can not set channel %s as Trigger", name);
 			return SR_ERR_ARG;
 		}
+		assign_channel(name, devc->trigger_channel, sdi->channels);
 		break;
 	case SR_CONF_TRIGGER_LEVEL:
 		devc->trigger_enabled = TRUE;
@@ -258,11 +257,10 @@ static int config_list(uint32_t key, GVariant **data,
 		if (!sdi) {
 			return SR_ERR_ARG;
 		}
-		devc = sdi->priv;
-		nvalues = g_slist_length(devc->enabled_channels);
+		nvalues = g_slist_length(sdi->channels);
 		tmp = g_malloc(nvalues * sizeof(GVariant *));
 		int i = 0;
-		for (l = devc->enabled_channels; l; l = l->next, i++) {
+		for (l = sdi->channels; l; l = l->next, i++) {
 			c = l->data;
 			tmp[i] = g_variant_new_string(c->name);
 		}
