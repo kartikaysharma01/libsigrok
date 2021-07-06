@@ -221,11 +221,12 @@ static int config_get(uint32_t key, GVariant **data,
 		}
 	} else {
 		if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
-			return SR_OK;
+			return SR_ERR_ARG;
 		switch (key) {
 		case SR_CONF_VDIV:
-			*data = g_variant_new("(tt)", vdivs[6][0], vdivs[6][1]);
-			sr_dbg(" range  == %d" ,((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range);
+			*data = g_variant_new("(tt)", vdivs[(((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range)][0],
+					vdivs[(((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range)][1]);
+			sr_dbg(" range  == %lu" ,((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range);
 			break;
 		default:
 			return SR_ERR_NA;
@@ -267,7 +268,7 @@ static int config_set(uint32_t key, GVariant *data,
 		}
 	} else {
 		if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
-			return SR_OK;
+			return SR_ERR_ARG;
 
 		switch (key) {
 		case SR_CONF_VDIV:
@@ -326,6 +327,9 @@ static int config_list(uint32_t key, GVariant **data,
 			return SR_ERR_NA;
 		}
 	} else {
+		if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
+			return SR_ERR_ARG;
+
 		switch (key) {
 		case SR_CONF_DEVICE_OPTIONS:
 			*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
