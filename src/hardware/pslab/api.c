@@ -44,7 +44,6 @@ static const uint32_t devopts[] = {
 };
 
 static const uint32_t devopts_cg[] = {
-		SR_CONF_NUM_VDIV | SR_CONF_GET,
 		SR_CONF_VDIV | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 };
 
