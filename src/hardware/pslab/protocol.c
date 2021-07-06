@@ -433,7 +433,6 @@ SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi)
 
 SR_PRIV float scale(const struct sr_channel *ch, uint16_t raw_value)
 {
-	sr_dbg("ln 433, in to scale raw value == %d", raw_value);
 	struct channel_priv *cp = ch->priv;
 	float slope = (float)((cp->max_input - cp->min_input) / cp->resolution * cp->gain);
 	float intercept = (float)(cp->min_input/cp->gain);

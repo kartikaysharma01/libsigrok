@@ -138,7 +138,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		{
 			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
 			struct channel_priv *cp = g_new0(struct channel_priv, 1);
-			struct channel_group_priv *cgp =  g_new0(struct channel_priv, 1);
+			struct channel_group_priv *cgp =  g_new0(struct channel_group_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
 			cp->min_input = analog_channels[i].minInput;
 			cp->max_input = analog_channels[i].maxInput;
@@ -290,7 +290,6 @@ static int config_list(uint32_t key, GVariant **data,
 	struct sr_channel *ch;
 	GSList *l;
 	GVariant **tmp;
-	gsize nvalues;
 
 	devc = (sdi) ? sdi->priv : NULL;
 
@@ -306,7 +305,6 @@ static int config_list(uint32_t key, GVariant **data,
 			if (!sdi)
 				return SR_ERR_ARG;
 
-//			nvalues = g_slist_length(sdi->channels);
 			tmp = g_malloc(4 * sizeof(GVariant *));
 			int i = 0;
 			for (l = sdi->channels; l; l = l->next) {
@@ -414,6 +412,7 @@ static int configure_oscilloscope(const struct sr_dev_inst *sdi) {
 			return SR_ERR_ARG;
 		}
 		set_gain(sdi, ch, ((struct channel_priv *)(ch))->gain);
+		sr_dbg("ln 415 , channel %s , gain == %lu ", ch->name, ((struct channel_priv *)(ch))->gain);
 		if (g_slist_length(devc->enabled_channels) == 1)
 			devc->channel_one_map = ch;
 	}
