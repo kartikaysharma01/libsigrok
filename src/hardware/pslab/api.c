@@ -241,7 +241,7 @@ static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
-	struct sr_channel *c;
+	struct sr_channel *ch;
 	GSList *l;
 	GVariant **tmp;
 	gsize nvalues;
@@ -260,9 +260,12 @@ static int config_list(uint32_t key, GVariant **data,
 		nvalues = g_slist_length(sdi->channels);
 		tmp = g_malloc(nvalues * sizeof(GVariant *));
 		int i = 0;
-		for (l = sdi->channels; l; l = l->next, i++) {
-			c = l->data;
-			tmp[i] = g_variant_new_string(c->name);
+		for (l = sdi->channels; l; l = l->next) {
+			ch = l->data;
+			if (ch->name[2]=='C' || ch->name[2]<'4') {
+				tmp[i] = g_variant_new_string(ch->name);
+				i++;
+			}
 		}
 		*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp,nvalues);
 		break;
