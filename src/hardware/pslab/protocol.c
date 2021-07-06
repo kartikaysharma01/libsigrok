@@ -373,7 +373,7 @@ SR_PRIV gboolean progress(const struct sr_dev_inst *sdi)
 
 SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint64_t gain)
 {
-	if(!(!g_strcmp0(ch->name,"CH1") || !g_strcmp0(ch->name,"CH2"))) {
+	if(g_strcmp0(ch->name,"CH1") && g_strcmp0(ch->name,"CH2")) {
 		sr_dbg("Analog gain is not available on %s", ch->name);
 		return SR_ERR_ARG;
 	}

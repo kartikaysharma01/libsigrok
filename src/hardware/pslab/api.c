@@ -219,13 +219,17 @@ static int config_get(uint32_t key, GVariant **data,
 			return SR_ERR_NA;
 		}
 	} else {
-		if (g_strcmp0(((struct sr_channel *)(sdi->channel_groups->data))->name,"CH1"))
-			pass;
-		else if (g_strcmp0(((struct sr_channel *)(sdi->channel_groups->data))->name,"CH2"))
-			continue;
-		else
+		if (g_strcmp0(((struct sr_channel *) (sdi->channel_groups->data))->name, "CH1")
+			&& g_strcmp0(((struct sr_channel *) (sdi->channel_groups->data))->name, "CH2"))
 			return SR_OK;
-
+		switch (key) {
+		case SR_CONF_VDIV:
+			*data = g_variant_new("(tt)", vdivs[((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range][0],
+					vdivs[((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range][1]);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
 	}
 	return SR_OK;
 }
@@ -234,32 +238,47 @@ static int config_set(uint32_t key, GVariant *data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
-
-	(void)cg;
 	const char *name;
+	uint8_t idx;
 
 	devc = sdi->priv;
-	switch (key) {
-	case SR_CONF_LIMIT_SAMPLES:
-		return sr_sw_limits_config_set(&devc->limits, key, data);
-	case SR_CONF_SAMPLERATE:
-		devc->samplerate = g_variant_get_uint64(data);
-		break;
-	case SR_CONF_TRIGGER_SOURCE:
-		devc->trigger_enabled = TRUE;
-		name = g_variant_get_string(data,0);
-		if (!(name[2]=='C' || name[2]<'4')) {
-			sr_spew("Can not set channel %s as Trigger", name);
-			return SR_ERR_ARG;
+	if (!cg) {
+		switch (key) {
+		case SR_CONF_LIMIT_SAMPLES:
+			return sr_sw_limits_config_set(&devc->limits, key, data);
+		case SR_CONF_SAMPLERATE:
+			devc->samplerate = g_variant_get_uint64(data);
+			break;
+		case SR_CONF_TRIGGER_SOURCE:
+			devc->trigger_enabled = TRUE;
+			name = g_variant_get_string(data,0);
+			if (!(name[2]=='C' || name[2]<'4')) {
+				sr_spew("Can not set channel %s as Trigger", name);
+				return SR_ERR_ARG;
+			}
+			assign_channel(name, devc->trigger_channel, sdi->channels);
+			break;
+		case SR_CONF_TRIGGER_LEVEL:
+			devc->trigger_enabled = TRUE;
+			devc->trigger_voltage = g_variant_get_double(data);
+			break;
+		default:
+			return SR_ERR_NA;
 		}
-		assign_channel(name, devc->trigger_channel, sdi->channels);
-		break;
-	case SR_CONF_TRIGGER_LEVEL:
-		devc->trigger_enabled = TRUE;
-		devc->trigger_voltage = g_variant_get_double(data);
-		break;
-	default:
-		return SR_ERR_NA;
+	} else {
+		if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
+			return SR_OK;
+
+		switch (key) {
+		case SR_CONF_VDIV:
+			if ((idx = std_u64_tuple_idx(data, ARRAY_AND_SIZE(vdivs))) < 0)
+				return SR_ERR_ARG;
+			((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range = idx;
+//			select_range()
+			break;
+		default:
+			return SR_ERR_NA;
+		}
 	}
 
 	return SR_OK;
@@ -274,35 +293,53 @@ static int config_list(uint32_t key, GVariant **data,
 	GVariant **tmp;
 	gsize nvalues;
 
-	switch (key) {
-	case SR_CONF_DEVICE_OPTIONS:
-	case SR_CONF_SCAN_OPTIONS:
-		return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
+	devc = (sdi) ? sdi->priv : NULL;
+
+	if(!cg) {
+		switch (key) {
+		case SR_CONF_DEVICE_OPTIONS:
+		case SR_CONF_SCAN_OPTIONS:
+			return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
 		case SR_CONF_SAMPLERATE:
 			*data = std_gvar_samplerates_steps(ARRAY_AND_SIZE(samplerates));
 			break;
-	case SR_CONF_TRIGGER_SOURCE:
-		if (!sdi) {
-			return SR_ERR_ARG;
-		}
-		nvalues = g_slist_length(sdi->channels);
-		tmp = g_malloc(nvalues * sizeof(GVariant *));
-		int i = 0;
-		for (l = sdi->channels; l; l = l->next) {
-			ch = l->data;
-			if (ch->name[2]=='C' || ch->name[2]<'4') {
-				tmp[i] = g_variant_new_string(ch->name);
-				i++;
+		case SR_CONF_TRIGGER_SOURCE:
+			if (!sdi)
+				return SR_ERR_ARG;
+
+//			nvalues = g_slist_length(sdi->channels);
+			tmp = g_malloc(4 * sizeof(GVariant *));
+			int i = 0;
+			for (l = sdi->channels; l; l = l->next) {
+				ch = l->data;
+				if (ch->name[2] == 'C' || ch->name[2] < '4') {
+					tmp[i] = g_variant_new_string(ch->name);
+					i++;
+				}
 			}
+			*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp, 4);
+			break;
+		case SR_CONF_LIMIT_SAMPLES:
+			*data = std_gvar_tuple_u64(MIN_SAMPLES, MAX_SAMPLES);
+			break;
+		default:
+			return SR_ERR_NA;
 		}
-		*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp,nvalues);
-		break;
-	case SR_CONF_LIMIT_SAMPLES:
-		*data = std_gvar_tuple_u64(MIN_SAMPLES, MAX_SAMPLES);
-		break;
-	default:
-		return SR_ERR_NA;
+	} else {
+		switch (key) {
+		case SR_CONF_DEVICE_OPTIONS:
+			*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
+			break;
+		case SR_CONF_VDIV:
+			if (!devc)
+				return SR_ERR_ARG;
+			*data = std_gvar_tuple_array(ARRAY_AND_SIZE(vdivs));
+			break;
+		default:
+			return SR_ERR_NA;
+		}
 	}
+
 	return SR_OK;
 }
 
