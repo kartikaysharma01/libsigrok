@@ -218,8 +218,7 @@ static int config_get(uint32_t key, GVariant **data,
 			return SR_ERR_NA;
 		}
 	} else {
-		if (g_strcmp0(((struct sr_channel *) (sdi->channel_groups->data))->name, "CH1")
-			&& g_strcmp0(((struct sr_channel *) (sdi->channel_groups->data))->name, "CH2"))
+		if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
 			return SR_OK;
 		switch (key) {
 		case SR_CONF_VDIV:
