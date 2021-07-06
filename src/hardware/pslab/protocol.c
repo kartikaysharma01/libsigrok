@@ -425,10 +425,10 @@ SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi)
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 	*commands = (0 << 4) | (1 << channel);
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	int level = unscale(devc->trigger_channel,devc->trigger_voltage);
-	/* TODO send int */
-//	send_int(level);
-	get_ack(sdi);
+	uint16_t level = unscale(devc->trigger_channel,devc->trigger_voltage);
+	serial_write_blocking(serial,&level, 2, serial_timeout(serial, 2));
+	if(get_ack(sdi) != SR_OK)
+		sr_dbg("Did not get ACK for configure trigger");
 }
 
 SR_PRIV float scale(const struct sr_channel *ch, uint16_t raw_value)
