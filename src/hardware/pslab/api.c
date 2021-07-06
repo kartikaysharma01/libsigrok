@@ -146,10 +146,12 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			if (!g_strcmp0(analog_channels[i].name, "CH1"))
 			{
 				cp->programmable_gain_amplifier = 1;
+				cp->range = 6;
 				devc->channel_one_map = ch;
 			}
 			else if (!g_strcmp0(analog_channels[i].name, "CH2"))
 			{
+				cp->range = 6;
 				cp->programmable_gain_amplifier = 2;
 			}
 			ch->priv = cp;
