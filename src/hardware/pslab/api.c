@@ -39,9 +39,13 @@ static const uint32_t drvopts[] = {
 static const uint32_t devopts[] = {
 		SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
-//		SR_CONF_HORIZ_TRIGGERPOS | SR_CONF_SET,
 		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 		SR_CONF_TRIGGER_LEVEL | SR_CONF_GET | SR_CONF_SET,
+};
+
+static const uint32_t devopts_cg[] = {
+		SR_CONF_NUM_VDIV | SR_CONF_GET,
+		SR_CONF_VDIV | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 };
 
 static const struct analog_channel analog_channels[] = {
@@ -53,6 +57,19 @@ static const struct analog_channel analog_channels[] = {
 		{"RES", 5,7,0, 3.3},
 		{"CAP", 6,5,0,3.3},
 		{"VOL", 7,8,0,3.3},
+};
+
+static const uint64_t vdivs[][2] = {
+		/* millivolts */
+		{ 500, 1000 },
+		{ 1500, 1000 },
+		/* volts */
+		{ 1, 1 },
+		{ 2, 1 },
+		{ 3, 1 },
+		{ 4, 1 },
+		{ 8, 1 },
+		{ 16, 1 },
 };
 
 static struct sr_dev_driver pslab_driver_info;
@@ -118,8 +135,6 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->conn = serial;
 		sdi->version = version;
 
-		struct sr_channel_group *cg = g_new0(struct sr_channel_group, 1);
-		cg->name = g_strdup("Analog");
 		for (int i = 0; i < NUM_ANALOG_CHANNELS; i++)
 		{
 			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
@@ -139,9 +154,12 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 				cp->programmable_gain_amplifier = 2;
 			}
 			ch->priv = cp;
+			// We have a separate channel group for each channel to support VDIV
+			struct sr_channel_group *cg = g_new0(struct sr_channel_group, 1);
+			cg->name = g_strdup(analog_channels[i].name);
 			cg->channels = g_slist_append(cg->channels, ch);
+			sdi->channel_groups = g_slist_append(sdi->channel_groups, cg);
 		}
-		sdi->channel_groups = g_slist_append(NULL, cg);
 		sr_sw_limits_init(&devc->limits);
 		devc->mode = SR_CONF_OSCILLOSCOPE;
 		devc->trigger_enabled = FALSE;
@@ -183,22 +201,32 @@ static int config_get(uint32_t key, GVariant **data,
 		return SR_ERR_ARG;
 
 	devc = sdi->priv;
-	switch (key) {
-	case SR_CONF_LIMIT_SAMPLES:
-		return sr_sw_limits_config_get(&devc->limits, key, data);
-	case SR_CONF_SAMPLERATE:
-		*data = g_variant_new_uint64(devc->samplerate);
-		break;
-	case SR_CONF_TRIGGER_SOURCE:
-		*data = g_variant_new_string(devc->trigger_channel->name);
-		break;
-	case SR_CONF_TRIGGER_LEVEL:
-		*data = g_variant_new_double(devc->trigger_voltage);
-		break;
-	default:
-		return SR_ERR_NA;
-	}
 
+	if(!cg) {
+		switch (key) {
+		case SR_CONF_LIMIT_SAMPLES:
+			return sr_sw_limits_config_get(&devc->limits, key, data);
+		case SR_CONF_SAMPLERATE:
+			*data = g_variant_new_uint64(devc->samplerate);
+			break;
+		case SR_CONF_TRIGGER_SOURCE:
+			*data = g_variant_new_string(devc->trigger_channel->name);
+			break;
+		case SR_CONF_TRIGGER_LEVEL:
+			*data = g_variant_new_double(devc->trigger_voltage);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
+	} else {
+		if (g_strcmp0(((struct sr_channel *)(sdi->channel_groups->data))->name,"CH1"))
+			pass;
+		else if (g_strcmp0(((struct sr_channel *)(sdi->channel_groups->data))->name,"CH2"))
+			continue;
+		else
+			return SR_OK;
+
+	}
 	return SR_OK;
 }
 
@@ -346,7 +374,7 @@ static int configure_oscilloscope(const struct sr_dev_inst *sdi) {
 			sr_spew("Can not sample from channel %s", ch->name);
 			return SR_ERR_ARG;
 		}
-		set_gain(sdi, ch, 1);
+		set_gain(sdi, ch, ((struct channel_priv *)(ch))->gain);
 		if (g_slist_length(devc->enabled_channels) == 1)
 			devc->channel_one_map = ch;
 	}
