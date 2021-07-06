@@ -26,7 +26,7 @@
 #include "libsigrok-internal.h"
 
 #define LOG_PREFIX "pslab"
-#define NUM_ANALOG_CHANNELS 8
+#define NUM_ANALOG_CHANNELS 4
 
 #define BUFSIZE 10000
 #define MAX_SAMPLES 10000

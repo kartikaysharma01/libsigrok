@@ -144,14 +144,12 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			cp->max_input = analog_channels[i].maxInput;
 			cp->gain = 1;
 			cp->resolution = pow(2, 10) - 1;
-			if (!g_strcmp0(analog_channels[i].name, "CH1"))
-			{
+			if (!g_strcmp0(analog_channels[i].name, "CH1")) {
 				cp->programmable_gain_amplifier = 1;
 				cgp->range = 6;
 				devc->channel_one_map = ch;
 			}
-			else if (!g_strcmp0(analog_channels[i].name, "CH2"))
-			{
+			else if (!g_strcmp0(analog_channels[i].name, "CH2")) {
 				cgp->range = 6;
 				cp->programmable_gain_amplifier = 2;
 			}
