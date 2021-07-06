@@ -138,6 +138,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		{
 			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
 			struct channel_priv *cp = g_new0(struct channel_priv, 1);
+			struct channel_group_priv *cgp =  g_new0(struct channel_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
 			cp->min_input = analog_channels[i].minInput;
 			cp->max_input = analog_channels[i].maxInput;
@@ -146,12 +147,12 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			if (!g_strcmp0(analog_channels[i].name, "CH1"))
 			{
 				cp->programmable_gain_amplifier = 1;
-				cp->range = 6;
+				cgp->range = 6;
 				devc->channel_one_map = ch;
 			}
 			else if (!g_strcmp0(analog_channels[i].name, "CH2"))
 			{
-				cp->range = 6;
+				cgp->range = 6;
 				cp->programmable_gain_amplifier = 2;
 			}
 			ch->priv = cp;
@@ -159,6 +160,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			struct sr_channel_group *cg = g_new0(struct sr_channel_group, 1);
 			cg->name = g_strdup(analog_channels[i].name);
 			cg->channels = g_slist_append(cg->channels, ch);
+			cg->priv = cgp;
 			sdi->channel_groups = g_slist_append(sdi->channel_groups, cg);
 		}
 		sr_sw_limits_init(&devc->limits);
@@ -195,8 +197,7 @@ static int config_get(uint32_t key, GVariant **data,
 					  const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
-
-	(void)cg;
+	int idx;
 
 	if (!sdi)
 		return SR_ERR_ARG;
@@ -224,9 +225,8 @@ static int config_get(uint32_t key, GVariant **data,
 			return SR_ERR_ARG;
 		switch (key) {
 		case SR_CONF_VDIV:
-			*data = g_variant_new("(tt)", vdivs[(((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range)][0],
-					vdivs[(((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range)][1]);
-			sr_dbg(" range  == %lu" ,((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range);
+			idx = ((struct channel_group_priv *)(cg->priv))->range;
+			*data = g_variant_new("(tt)", vdivs[idx][0], vdivs[idx][1]);
 			break;
 		default:
 			return SR_ERR_NA;
@@ -274,7 +274,7 @@ static int config_set(uint32_t key, GVariant *data,
 		case SR_CONF_VDIV:
 			if ((idx = std_u64_tuple_idx(data, ARRAY_AND_SIZE(vdivs))) < 0)
 				return SR_ERR_ARG;
-			((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range = idx;
+			((struct channel_group_priv *)(cg->priv))->range = idx;
 //			select_range()
 			break;
 		default:

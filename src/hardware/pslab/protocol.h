@@ -101,8 +101,12 @@ struct channel_priv {
 	uint64_t gain;
 	int programmable_gain_amplifier;
 	double resolution;
-	uint64_t range;
 };
+
+struct channel_group_priv {
+	int range;
+};
+
 
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data);
 SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial, uint8_t c1, uint8_t c2);
