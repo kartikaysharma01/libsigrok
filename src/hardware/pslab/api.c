@@ -224,8 +224,8 @@ static int config_get(uint32_t key, GVariant **data,
 			return SR_OK;
 		switch (key) {
 		case SR_CONF_VDIV:
-			*data = g_variant_new("(tt)", vdivs[((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range][0],
-					vdivs[((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range][1]);
+			*data = g_variant_new("(tt)", vdivs[6][0], vdivs[6][1]);
+			sr_dbg(" range  == %d" ,((struct channel_priv *)(((struct sr_channel *)(cg->channels))->priv))->range);
 			break;
 		default:
 			return SR_ERR_NA;
