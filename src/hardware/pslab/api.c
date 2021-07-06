@@ -411,8 +411,8 @@ static int configure_oscilloscope(const struct sr_dev_inst *sdi) {
 			sr_spew("Can not sample from channel %s", ch->name);
 			return SR_ERR_ARG;
 		}
-		set_gain(sdi, ch, ((struct channel_priv *)(ch))->gain);
 		sr_dbg("ln 415 , channel %s , gain == %lu ", ch->name, ((struct channel_priv *)(ch))->gain);
+		set_gain(sdi, ch, ((struct channel_priv *)(ch))->gain);
 		if (g_slist_length(devc->enabled_channels) == 1)
 			devc->channel_one_map = ch;
 	}
