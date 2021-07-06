@@ -146,7 +146,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devc->mode = SR_CONF_OSCILLOSCOPE;
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
-//		devc->trigger_channel = devc->channel_one_map;
+		devc->trigger_channel = devc->channel_one_map;
 
 		devc->data = g_malloc(devc->limits.limit_samples * sizeof(float));
 
