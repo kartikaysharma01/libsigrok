@@ -399,7 +399,7 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 
 	for (l = devc->enabled_channels; l; l = l->next) {
 		ch = l->data;
-		set_gain(sdi, ch, ((struct channel_priv *)(ch->priv))->gain);
+		pslab_set_gain(sdi, ch, ((struct channel_priv *) (ch->priv))->gain);
 		if (g_slist_length(devc->enabled_channels) == 1)
 			devc->channel_one_map = ch;
 	}
@@ -407,7 +407,7 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 	if(!devc->trigger_channel)
 		devc->trigger_channel = devc->channel_one_map;
 	if(devc->trigger_enabled)
-		configure_trigger(sdi);
+		pslab_configure_trigger(sdi);
 
 }
 

@@ -102,15 +102,15 @@ struct channel_group_priv {
 
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data);
 SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial);
-SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint16_t gain);
-SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution);
-SR_PRIV int get_ack(const struct sr_dev_inst *sdi);
-SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi);
+SR_PRIV int pslab_set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint16_t gain);
+SR_PRIV void pslab_set_resolution(const struct sr_channel *ch, int resolution);
+SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi);
+SR_PRIV void pslab_configure_trigger(const struct sr_dev_inst *sdi);
 SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_fetch_data(const struct sr_dev_inst *sdi);
-SR_PRIV gboolean progress(const struct sr_dev_inst *sdi);
-SR_PRIV float scale(const struct sr_channel *ch, uint16_t raw_value);
-SR_PRIV int unscale(const struct sr_channel *ch, double voltage);
+SR_PRIV gboolean pslab_progress(const struct sr_dev_inst *sdi);
+SR_PRIV float pslab_scale(const struct sr_channel *ch, uint16_t raw_value);
+SR_PRIV int pslab_unscale(const struct sr_channel *ch, double voltage);
 SR_PRIV void pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t buf[], int count);
 SR_PRIV void pslab_write_u16(struct sr_serial_dev_inst* serial, uint16_t val[], int count);
 

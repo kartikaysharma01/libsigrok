@@ -60,10 +60,10 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 			sr_dbg("Failed to read buffer properly, samples read = %d", samples_collected);
 			break;
 		}
-		devc->data[i] = scale(ch, *devc->short_int_buffer);
+		devc->data[i] = pslab_scale(ch, *devc->short_int_buffer);
 		samples_collected = i;
 	}
-	get_ack(sdi);
+	pslab_get_ack(sdi);
 
 	sr_analog_init(&analog, &encoding, &meaning, &spec, 6);
 	analog.meaning->channels = g_slist_append(NULL, ch);
@@ -114,7 +114,6 @@ SR_PRIV void pslab_write_u16(struct sr_serial_dev_inst* serial, uint16_t val[], 
 	}
 }
 
-
 SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial)
 {
 	sr_info("Sending version commands to device");
@@ -140,7 +139,7 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	devc = sdi->priv;
 	serial = sdi->conn;
 	cp_map = devc->channel_one_map->priv;
-	set_resolution(devc->channel_one_map,10);
+	pslab_set_resolution(devc->channel_one_map, 10);
 	chosa = cp_map->chosa;
 	cp_map->buffer_idx = 0;
 
@@ -156,7 +155,7 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 		}
 
 		if (devc->samplerate <= 1000000) {
-			set_resolution(devc->channel_one_map,12);
+			pslab_set_resolution(devc->channel_one_map, 12);
 			uint8_t cmd[] = {CAPTURE_DMASPEED, (chosa | 0x80)};
 			pslab_write_u8(serial, cmd, 2);
 		} else {
@@ -168,7 +167,7 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			struct sr_channel *ch = l->data;
 			if (!g_strcmp0(ch->name, "CH2")) {
 				struct channel_priv *cp = ch->priv;
-				set_resolution(ch,10);
+				pslab_set_resolution(ch, 10);
 				cp->buffer_idx = (int)devc->limits.limit_samples;
 				break;
 			}
@@ -180,7 +179,7 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			struct sr_channel *ch = l->data;
 			if (g_strcmp0(ch->name, "CH1")) {
 				struct channel_priv *cp = ch->priv;
-				set_resolution(ch,10);
+				pslab_set_resolution(ch, 10);
 				cp->buffer_idx = (i) * (int)devc->limits.limit_samples;
 			}
 		}
@@ -191,12 +190,12 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	uint16_t val[] = {devc->limits.limit_samples, (int)(8000000/devc->samplerate)};
 	pslab_write_u16(serial, val, 2);
 
-	if (get_ack(sdi) != SR_OK)
+	if (pslab_get_ack(sdi) != SR_OK)
 		sr_dbg("Failed to capture samples");
 
 	g_usleep(8000000 * devc->limits.limit_samples / devc->samplerate);
 
-	while(!progress(sdi))
+	while(!pslab_progress(sdi))
 		continue;
 
 }
@@ -224,7 +223,7 @@ SR_PRIV int pslab_fetch_data(const struct sr_dev_inst *sdi)
 	return SR_OK;
 }
 
-SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution)
+SR_PRIV void pslab_set_resolution(const struct sr_channel *ch, int resolution)
 {
 	sr_info("Setting %s resolution to %d", ch->name, resolution);
 	struct channel_priv *cp;
@@ -233,7 +232,7 @@ SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution)
 	cp->resolution = pow(2,resolution) - 1;
 }
 
-SR_PRIV gboolean progress(const struct sr_dev_inst *sdi)
+SR_PRIV gboolean pslab_progress(const struct sr_dev_inst *sdi)
 {
 	sr_info("Checking if all the samples have been captured in buffer");
 	struct sr_serial_dev_inst *serial;
@@ -249,13 +248,13 @@ SR_PRIV gboolean progress(const struct sr_dev_inst *sdi)
 	serial_read_blocking(serial,buf2,2, serial_timeout(serial,2));
 	uint16_t samples_read = *buf2;
 
-	if (get_ack(sdi) != SR_OK)
+	if (pslab_get_ack(sdi) != SR_OK)
 		sr_dbg("Failed in knowing capturing status");
 
 	return capturing_complete;
 }
 
-SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint16_t gain)
+SR_PRIV int pslab_set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint16_t gain)
 {
 	sr_info("Set gain of channel %s to %d", ch->name, gain);
 	struct sr_serial_dev_inst *serial;
@@ -279,7 +278,7 @@ SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch,
 	uint8_t cmd[] = {ADC, SET_PGA_GAIN, cp->programmable_gain_amplifier, gain_idx};
 	pslab_write_u8(serial, cmd, 4);
 
-	if (get_ack(sdi) != SR_OK) {
+	if (pslab_get_ack(sdi) != SR_OK) {
 		sr_dbg("Could not set set gain %d on channel %s", gain, ch->name);
 		return SR_ERR_IO;
 	}
@@ -287,7 +286,7 @@ SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch,
 	return SR_OK;
 }
 
-SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi)
+SR_PRIV void pslab_configure_trigger(const struct sr_dev_inst *sdi)
 {
 	struct dev_context *devc;
 	struct sr_serial_dev_inst *serial;
@@ -306,15 +305,15 @@ SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi)
 
 	uint8_t cmd[] = {ADC, CONFIGURE_TRIGGER, (0 << 4) | (1 << channel)};
 	pslab_write_u8(serial, cmd, 3);
-	uint16_t level = unscale(devc->trigger_channel,devc->trigger_voltage);
+	uint16_t level = pslab_unscale(devc->trigger_channel, devc->trigger_voltage);
 	serial_write_blocking(serial,&level, 2, serial_timeout(serial, 2));
 
-	if (get_ack(sdi) != SR_OK)
+	if (pslab_get_ack(sdi) != SR_OK)
 		sr_dbg("Could not configure trigger on channel %s, voltage = %f raw value = %d",
 			devc->trigger_channel->name, devc->trigger_voltage, level);
 }
 
-SR_PRIV float scale(const struct sr_channel *ch, uint16_t raw_value)
+SR_PRIV float pslab_scale(const struct sr_channel *ch, uint16_t raw_value)
 {
 	struct channel_priv *cp = ch->priv;
 	float slope = (float)((cp->max_input - cp->min_input) / cp->resolution * cp->gain);
@@ -322,7 +321,7 @@ SR_PRIV float scale(const struct sr_channel *ch, uint16_t raw_value)
 	return slope * (float)raw_value + intercept;
 }
 
-SR_PRIV int unscale(const struct sr_channel *ch, double voltage)
+SR_PRIV int pslab_unscale(const struct sr_channel *ch, double voltage)
 {
 	struct channel_priv *cp;
 
@@ -338,7 +337,7 @@ SR_PRIV int unscale(const struct sr_channel *ch, double voltage)
 	return level;
 }
 
-SR_PRIV int get_ack(const struct sr_dev_inst *sdi)
+SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi)
 {
 	struct sr_serial_dev_inst *serial;
 
