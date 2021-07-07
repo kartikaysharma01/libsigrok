@@ -22,7 +22,7 @@
 #include "protocol.h"
 
 static const uint64_t samplerates[] = {
-		SR_KHZ(2),
+		SR_KHZ(1),
 		SR_MHZ(2),
 		SR_HZ(1),
 };
@@ -154,6 +154,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		}
 		sr_sw_limits_init(&devc->limits);
 		devc->mode = SR_CONF_OSCILLOSCOPE;
+		devc->samplerate = 2000;
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
 		devc->trigger_channel = devc->channel_one_map;
