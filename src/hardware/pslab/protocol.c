@@ -166,20 +166,20 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			pslab_write_u8(serial, cmd, 2);
 		}
 	} else if (g_slist_length(devc->enabled_channels) == 2) {
-		struct sr_channel ch;
+		struct sr_channel* ch = g_malloc0(sizeof(struct sr_channel));
 		assign_channel(ch234[0], ch, devc->enabled_channels);
-		struct channel_priv *cp = ch.priv;
-		pslab_set_resolution(&ch, 10);
+		struct channel_priv *cp = ch->priv;
+		pslab_set_resolution(ch, 10);
 		cp->buffer_idx = (int)devc->limits.limit_samples;
 
 		uint8_t cmd[] = {CAPTURE_TWO, (0x80 * devc->trigger_enabled)};
 		pslab_write_u8(serial, cmd, 2);
 	} else {
 		for (i=0; i<3; i++) {
-			struct sr_channel ch;
+			struct sr_channel* ch = g_malloc0(sizeof (struct sr_channel));
 			assign_channel(ch234[i], ch, devc->enabled_channels);
-			struct channel_priv *cp = ch.priv;
-			pslab_set_resolution(&ch, 10);
+			struct channel_priv *cp = ch->priv;
+			pslab_set_resolution(ch, 10);
 			cp->buffer_idx = (i + 1) * (int)devc->limits.limit_samples;
 		}
 		uint8_t cmd[] = {CAPTURE_FOUR, (chosa | (0 << 4) | (0x80 * devc->trigger_enabled))};
@@ -355,7 +355,7 @@ SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi)
 }
 
 SR_PRIV int assign_channel(const char* channel_name,
-			   struct sr_channel target, GSList* list)
+			   const struct sr_channel* target, GSList* list)
 {
 	sr_info("Assign channel %s from list to target", channel_name);
 	GSList *l;
@@ -363,7 +363,7 @@ SR_PRIV int assign_channel(const char* channel_name,
 	for(l = list; l ; l = l->next) {
 		ch = l->data;
 		if(!g_strcmp0(ch->name, channel_name)) {
-			target = *ch;
+			target = ch;
 			return SR_OK;
 		}
 	}

@@ -112,7 +112,7 @@ SR_PRIV int pslab_fetch_data(const struct sr_dev_inst *sdi);
 SR_PRIV gboolean pslab_progress(const struct sr_dev_inst *sdi);
 SR_PRIV float pslab_scale(const struct sr_channel *ch, uint16_t raw_value);
 SR_PRIV int assign_channel(const char* channel_name,
-			   struct sr_channel target, GSList* list);
+			   const struct sr_channel *target, GSList* list);
 SR_PRIV int pslab_unscale(const struct sr_channel *ch, double voltage);
 SR_PRIV void pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t buf[], int count);
 SR_PRIV void pslab_write_u16(struct sr_serial_dev_inst* serial, uint16_t val[], int count);
