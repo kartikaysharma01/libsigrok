@@ -21,8 +21,6 @@
 #include <math.h>
 #include "protocol.h"
 
-static const uint8_t GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
-
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 {
 	struct sr_dev_inst *sdi;
@@ -371,7 +369,7 @@ SR_PRIV gboolean progress(const struct sr_dev_inst *sdi)
 	return capturing_complete;
 }
 
-SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint64_t gain)
+SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint16_t gain)
 {
 	if(g_strcmp0(ch->name,"CH1") && g_strcmp0(ch->name,"CH2")) {
 		sr_dbg("Analog gain is not available on %s", ch->name);
@@ -382,7 +380,7 @@ SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch,
 	struct channel_priv *cp = ch->priv;
 	cp->gain = gain;
 	uint8_t pga = cp->programmable_gain_amplifier;
-	uint8_t gain_idx = std_u8_idx(g_variant_new_uint64(gain), GAIN_VALUES, 8);
+	uint8_t gain_idx = std_u8_idx(g_variant_new_uint16(gain), GAIN_VALUES, 8);
 
 	if(gain_idx < 0) {
 		sr_dbg("Invalid gain value");
@@ -437,7 +435,6 @@ SR_PRIV float scale(const struct sr_channel *ch, uint16_t raw_value)
 	float slope = (float)((cp->max_input - cp->min_input) / cp->resolution * cp->gain);
 	float intercept = (float)(cp->min_input/cp->gain);
 	float x = slope * raw_value + intercept;
-	sr_dbg("ln 438 scaled %d to voltage == %f", raw_value, x);
 	return slope * raw_value + intercept;
 }
 

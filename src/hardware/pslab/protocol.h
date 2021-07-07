@@ -54,6 +54,8 @@
 
 #define RETRIEVE_BUFFER 0x08
 
+static const uint8_t GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
+
 struct dev_context {
 	/* device mode */
 	int mode;
@@ -98,7 +100,7 @@ struct channel_priv {
 	int chosa;
 	double min_input;
 	double max_input;
-	uint64_t gain;
+	uint16_t gain;
 	int programmable_gain_amplifier;
 	double resolution;
 };
@@ -116,7 +118,7 @@ SR_PRIV int pslab_update_samplerate(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_update_vdiv(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_init(const struct sr_dev_inst *sdi);
-SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint64_t gain);
+SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint16_t gain);
 SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution);
 SR_PRIV int get_ack(const struct sr_dev_inst *sdi);
 SR_PRIV void configure_trigger(const struct sr_dev_inst *sdi);

@@ -59,16 +59,16 @@ static const struct analog_channel analog_channels[] = {
 };
 
 static const uint64_t vdivs[][2] = {
+		/* volts */
+		{ 16, 1 },
+		{ 8, 1 },
+		{ 4, 1 },
+		{ 3, 1 },
+		{ 2, 1 },
+		{ 1500, 1000 }, // 1.5 V
+		{ 1, 1 },
 		/* millivolts */
 		{ 500, 1000 },
-		{ 1500, 1000 },
-		/* volts */
-		{ 1, 1 },
-		{ 2, 1 },
-		{ 3, 1 },
-		{ 4, 1 },
-		{ 8, 1 },
-		{ 16, 1 },
 };
 
 static struct sr_dev_driver pslab_driver_info;
@@ -146,11 +146,11 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			cp->resolution = pow(2, 10) - 1;
 			if (!g_strcmp0(analog_channels[i].name, "CH1")) {
 				cp->programmable_gain_amplifier = 1;
-				cgp->range = 6;
+				cgp->range = 0;
 				devc->channel_one_map = ch;
 			}
 			else if (!g_strcmp0(analog_channels[i].name, "CH2")) {
-				cgp->range = 6;
+				cgp->range = 0;
 				cp->programmable_gain_amplifier = 2;
 			}
 			ch->priv = cp;
@@ -189,6 +189,13 @@ static int assign_channel(const char* channel_name, const struct sr_channel *tar
 	}
 	target = NULL;
 	return 0;
+}
+
+static void select_range(const struct sr_channel_group *cg, uint8_t idx)
+{
+	uint16_t gain = GAIN_VALUES[idx];
+	((struct channel_priv *)(((struct sr_channel *)(cg->channels->data))->priv))->gain = gain;
+	sr_dbg("Set gain %d on channel %s", gain, cg->name);
 }
 
 static int config_get(uint32_t key, GVariant **data,
@@ -273,7 +280,7 @@ static int config_set(uint32_t key, GVariant *data,
 			if ((idx = std_u64_tuple_idx(data, ARRAY_AND_SIZE(vdivs))) < 0)
 				return SR_ERR_ARG;
 			((struct channel_group_priv *)(cg->priv))->range = idx;
-//			select_range()
+			select_range(cg, idx);
 			break;
 		default:
 			return SR_ERR_NA;
@@ -392,7 +399,7 @@ static int check_args(guint channels,uint64_t samples ,uint64_t samplerate, gboo
 	}
 
 	if(samplerate > lookup_maximum_samplerate(channels, trigger)) {
-		sr_dbg("Samplerate must be less than %lu", lookup_maximum_samplerate(channels, trigger));
+		sr_dbg("Samplerate must be less than %llu", lookup_maximum_samplerate(channels, trigger));
 		return SR_ERR_SAMPLERATE;
 	}
 
@@ -411,8 +418,7 @@ static int configure_oscilloscope(const struct sr_dev_inst *sdi) {
 			sr_spew("Can not sample from channel %s", ch->name);
 			return SR_ERR_ARG;
 		}
-		sr_dbg("ln 415 , channel %s , gain == %lu ", ch->name, ((struct channel_priv *)(ch))->gain);
-		set_gain(sdi, ch, ((struct channel_priv *)(ch))->gain);
+		set_gain(sdi, ch, ((struct channel_priv *)(ch->priv))->gain);
 		if (g_slist_length(devc->enabled_channels) == 1)
 			devc->channel_one_map = ch;
 	}
