@@ -86,10 +86,11 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 		/* We got the samples for this channel, now get the next channel. */
 		devc->channel_entry = devc->channel_entry->next;
 	} else {
-		/* Samples collected from al channels. */
+		/* Samples collected from all channels. */
+		g_free(devc->short_int_buffer);
+		g_free(devc->enabled_channels);
 		std_session_send_df_frame_end(sdi);
 		sr_dev_acquisition_stop(sdi);
-
 	}
 
 	return TRUE;
@@ -146,10 +147,8 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	chosa = cp_map->chosa;
 	cp_map->buffer_idx = 0;
 
-	uint8_t *commands;
-	commands = g_malloc0(sizeof(uint8_t));
-	*commands = ADC;
-	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	uint8_t command[] = {ADC};
+	pslab_write_u8(serial, command, 1);
 
 	if (g_slist_length(devc->enabled_channels) == 1) {
 		if (devc->trigger_enabled) {
@@ -251,6 +250,8 @@ SR_PRIV gboolean pslab_progress(const struct sr_dev_inst *sdi)
 	if (pslab_get_ack(sdi) != SR_OK)
 		sr_dbg("Failed in knowing capturing status");
 
+	g_free(buf);
+	g_free(buf2);
 	return capturing_complete;
 }
 
@@ -351,6 +352,7 @@ SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi)
 		return SR_ERR_IO;
 	}
 
+	g_free(buf);
 	return SR_OK;
 }
 
