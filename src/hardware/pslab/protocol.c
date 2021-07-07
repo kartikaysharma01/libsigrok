@@ -31,10 +31,8 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	struct sr_analog_encoding encoding;
 	struct sr_analog_meaning meaning;
 	struct sr_analog_spec spec;
-	struct sr_datafeed_logic logic;
-	int len, i, vref;
+	int i;
 	struct sr_channel *ch;
-	gsize expected_data_bytes;
 
 	(void)fd;
 
@@ -109,12 +107,24 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	return TRUE;
 }
 
+SR_PRIV int pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t buf[], int count)
+{
+	for (int i = 0; i < count; i++) {
+		serial_write_blocking(serial, &buf[i], 1, serial_timeout(serial, 1));
+	}
+}
+
+SR_PRIV int pslab_write_u16(struct sr_serial_dev_inst* serial)
+{
+	return SR_OK;
+}
+
 SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial, uint8_t c1, uint8_t c2 )
 {
+	uint8_t buf[] = {COMMON, VERSION_COMMAND};
 	char *buffer = g_malloc0(16);
 	int len = 15;
-	serial_write_blocking(serial,&c1, sizeof(c1), serial_timeout(serial, sizeof(c1)));
-	serial_write_blocking(serial,&c2, sizeof(c2),serial_timeout(serial, sizeof(c2)));
+	pslab_write_u8(serial, buf, 2);
 	serial_readline(serial, &buffer, &len, serial_timeout(serial, sizeof(buffer)));
 	return buffer;
 }
