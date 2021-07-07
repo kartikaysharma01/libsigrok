@@ -112,7 +112,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 
 		version = pslab_get_version(serial);
 		gboolean isPSLabDevice = g_str_has_prefix(version, "PSLab") || g_str_has_prefix(version, "CSpark");
-		if(!isPSLabDevice) {
+		if (!isPSLabDevice) {
 			g_free(version);
 			serial_close(serial);
 			continue;
@@ -158,7 +158,6 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
 		devc->trigger_channel = devc->channel_one_map;
-		devc->data = g_malloc(devc->limits.limit_samples * sizeof(float));
 		sdi->priv = devc;
 
 		devices = g_slist_append(devices, sdi);
@@ -433,7 +432,7 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 			return ret;
 
 		configure_oscilloscope(sdi);
-		caputure_oscilloscope(sdi);
+			pslab_caputure_oscilloscope(sdi);
 		break;
 	default:
 		break;
