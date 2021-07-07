@@ -28,13 +28,12 @@
 #define LOG_PREFIX "pslab"
 #define NUM_ANALOG_CHANNELS 4
 
-#define BUFSIZE 10000
 #define MAX_SAMPLES 10000
 #define COMMON 0x0b
-#define VERSION_COMMAND 0x05
 #define MIN_SAMPLES 10
 
 #define ADC 0x02
+#define VERSION_COMMAND 0x05
 #define CAPTURE_ONE 0x01
 #define CAPTURE_TWO 0x02
 #define CAPTURE_DMASPEED 0x03
@@ -51,7 +50,6 @@
 #define CAPTURE_MULTIPLE 0x0e
 #define SET_HI_CAPTURE 0x0f
 #define SET_LO_CAPTURE 0x10
-
 #define RETRIEVE_BUFFER 0x08
 
 static const uint8_t GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
@@ -66,13 +64,10 @@ struct dev_context {
 	double trigger_voltage;
 
 	/* Acquisition settings */
-	uint64_t samplerate; // Time gap between samples in microseconds
+	uint64_t samplerate;
 	GSList * enabled_channels;
 	const struct sr_channel *channel_one_map;
-	gboolean ch_enabled[NUM_ANALOG_CHANNELS];
 	struct sr_sw_limits limits;
-	unsigned char buf[BUFSIZE];
-	int buflen;
 
 	/* GSList entry for the current channel. */
 	GSList *channel_entry;
@@ -84,13 +79,9 @@ struct dev_context {
 
 struct analog_channel {
 	const char *name;
-
 	int index;
-
 	int chosa;
-
 	double minInput;
-
 	double maxInput;
 };
 
@@ -111,12 +102,6 @@ struct channel_group_priv {
 
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data);
 SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial, uint8_t c1, uint8_t c2);
-
-SR_PRIV int pslab_update_coupling(const struct sr_dev_inst *sdi);
-SR_PRIV int pslab_update_samplerate(const struct sr_dev_inst *sdi);
-SR_PRIV int pslab_update_vdiv(const struct sr_dev_inst *sdi);
-SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi);
-SR_PRIV int pslab_init(const struct sr_dev_inst *sdi);
 SR_PRIV int set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint16_t gain);
 SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution);
 SR_PRIV int get_ack(const struct sr_dev_inst *sdi);
@@ -126,6 +111,5 @@ SR_PRIV int fetch_data(const struct sr_dev_inst *sdi);
 SR_PRIV gboolean progress(const struct sr_dev_inst *sdi);
 SR_PRIV float scale(const struct sr_channel *ch, uint16_t raw_value);
 SR_PRIV int unscale(const struct sr_channel *ch, double voltage);
-SR_PRIV struct dev_context *pslab_dev_new();
 
 #endif

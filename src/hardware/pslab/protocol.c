@@ -119,26 +119,6 @@ SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial, uint8_t c1, u
 	return buffer;
 }
 
-SR_PRIV int pslab_update_coupling(const struct sr_dev_inst *sdi)
-{
-	return SR_OK;
-}
-
-SR_PRIV int pslab_update_samplerate(const struct sr_dev_inst *sdi)
-{
-//	struct dev_context *devc = sdi->priv;
-//	sr_dbg("update samplerate %d", samplerate_to_reg(devc->samplerate));
-//
-//	return write_control(sdi, SAMPLERATE_REG, samplerate_to_reg(devc->samplerate));
-
-	return SR_OK;
-}
-
-SR_PRIV int pslab_update_vdiv(const struct sr_dev_inst *sdi)
-{
-	return SR_OK;
-}
-
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 {
 	// invalidate_buffer()
@@ -283,41 +263,6 @@ SR_PRIV int fetch_data(const struct sr_dev_inst *sdi)
 	uint16_t samples = devc->limits.limit_samples ;
 	serial_write_blocking(serial,&samples, 2, serial_timeout(serial,  2));
 
-	return SR_OK;
-}
-SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi)
-{
-	struct dev_context *devc = sdi->priv;
-	struct sr_serial_dev_inst *serial = sdi->conn;
-
-	uint8_t *commands;
-	commands = g_malloc0(sizeof(uint8_t));
-	*commands = ADC;
-	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	*commands = CAPTURE_DMASPEED;
-	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	*commands = 3 & 0xff;
-	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	short int samplecount = 1000;
-	short int timegap = 4;
-	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
-	serial_write_blocking(serial,&timegap, sizeof (timegap), serial_timeout(serial, sizeof (timegap)));
-
-	char *buf = g_malloc0(1);
-	serial_read_blocking(serial,buf,1,100);
-	printf("ack byte %s\n",buf);
-	uint8_t x = *buf;
-	printf("test %d\n", x & 0x01);
-
-	g_usleep(4000);
-
-	*commands = COMMON;
-	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	*commands = RETRIEVE_BUFFER;
-	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	short int startingposition = 0;
-	serial_write_blocking(serial,&startingposition, sizeof (startingposition), serial_timeout(serial, sizeof (startingposition)));
-	serial_write_blocking(serial,&samplecount, sizeof (samplecount), serial_timeout(serial, sizeof (samplecount)));
 	return SR_OK;
 }
 
