@@ -355,7 +355,7 @@ SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi)
 }
 
 SR_PRIV int assign_channel(const char* channel_name,
-			   const struct sr_channel* target, GSList* list)
+			   struct sr_channel *target, GSList* list)
 {
 	sr_info("Assign channel %s from list to target", channel_name);
 	GSList *l;
@@ -363,7 +363,7 @@ SR_PRIV int assign_channel(const char* channel_name,
 	for(l = list; l ; l = l->next) {
 		ch = l->data;
 		if(!g_strcmp0(ch->name, channel_name)) {
-			target = ch;
+			*target = *ch;
 			return SR_OK;
 		}
 	}
