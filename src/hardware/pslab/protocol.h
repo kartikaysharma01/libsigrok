@@ -95,7 +95,6 @@ struct analog_channel {
 };
 
 struct channel_priv {
-	uint64_t samples_in_buffer;
 	int buffer_idx;
 	int chosa;
 	double min_input;

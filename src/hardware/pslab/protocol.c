@@ -324,20 +324,6 @@ SR_PRIV int pslab_update_channels(const struct sr_dev_inst *sdi)
 	return SR_OK;
 }
 
-SR_PRIV int pslab_init(const struct sr_dev_inst *sdi)
-{
-	sr_dbg("Initializing");
-
-	pslab_update_samplerate(sdi);
-	pslab_update_vdiv(sdi);
-	pslab_update_coupling(sdi);
-//	pslab_update_channels(sdi);
-	// hantek_6xxx_update_channels(sdi); /* Only 2 channel mode supported. */
-
-	return SR_OK;
-}
-
-
 SR_PRIV void set_resolution(const struct sr_channel *ch, int resolution)
 {
 	struct channel_priv *cp = ch->priv;

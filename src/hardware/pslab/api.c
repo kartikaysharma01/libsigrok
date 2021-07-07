@@ -52,10 +52,6 @@ static const struct analog_channel analog_channels[] = {
 		{"CH2", 1,0,16.5, -16.5},
 		{"CH3", 2,1,-3.3, 3.3},
 		{"MIC", 3,2,-3.3,3.3},
-//		{"AN4", 4,4,0, 3.3},
-//		{"RES", 5,7,0, 3.3},
-//		{"CAP", 6,5,0,3.3},
-//		{"VOL", 7,8,0,3.3},
 };
 
 static const uint64_t vdivs[][2] = {
@@ -77,6 +73,12 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 {
 	GSList *l, *devices;
 	struct sr_config *src;
+	struct sr_serial_dev_inst *serial;
+	struct sr_dev_inst *sdi;
+	struct dev_context *devc;
+	const char *path, *serialcomm = "1000000/8n1";
+	char *device_path, *version;
+	int i;
 
 	GSList *device_paths_v5 = sr_serial_find_usb(0x04D8, 0x00DF);
 
@@ -85,38 +87,30 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	GSList *device_paths = g_slist_concat(device_paths_v5, device_paths_v6);
 
 	devices = NULL;
-	struct sr_serial_dev_inst *serial;
-	struct sr_dev_inst *sdi;
-	struct dev_context *devc;
 
-	const char *path = NULL;
-	const char *serialcomm = "1000000/8n1";
-
-	for (l = options; l; l = l->next)
-	{
+	for (l = options; l; l = l->next) {
 		src = l->data;
 		switch (src->key) {
-			case SR_CONF_CONN:
-				path = g_variant_get_string(src->data, NULL);
-				break;
-			case SR_CONF_SERIALCOMM:
-				serialcomm = g_variant_get_string(src->data, NULL);
-				break;
+		case SR_CONF_CONN:
+			path = g_variant_get_string(src->data, NULL);
+			break;
+		case SR_CONF_SERIALCOMM:
+			serialcomm = g_variant_get_string(src->data, NULL);
+			break;
 		}
 	}
 
-	for (l = device_paths; l; l = l->next)
-	{
-		char *device_path = l->data;
-		if (path && path != device_path) {
+	for (l = device_paths; l; l = l->next) {
+		device_path = l->data;
+		if (path && path != device_path)
 			continue;
-		}
-		serial = sr_serial_dev_inst_new(device_path, serialcomm);
-		if (serial_open(serial, SERIAL_RDWR) != SR_OK) {
-			continue;
-		}
 
-		char* version = pslab_get_version(serial, COMMON, VERSION_COMMAND);
+		serial = sr_serial_dev_inst_new(device_path, serialcomm);
+
+		if (serial_open(serial, SERIAL_RDWR) != SR_OK)
+			continue;
+
+		version = pslab_get_version(serial, COMMON, VERSION_COMMAND);
 		gboolean isPSLabDevice = g_str_has_prefix(version, "PSLab") || g_str_has_prefix(version, "CSpark");
 		if(!isPSLabDevice) {
 			g_free(version);
@@ -134,10 +128,10 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->conn = serial;
 		sdi->version = version;
 
-		for (int i = 0; i < NUM_ANALOG_CHANNELS; i++)
-		{
+		for (i = 0; i < NUM_ANALOG_CHANNELS; i++) {
 			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
 			struct channel_priv *cp = g_new0(struct channel_priv, 1);
+			struct sr_channel_group *cg = g_new0(struct sr_channel_group, 1);
 			struct channel_group_priv *cgp =  g_new0(struct channel_group_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
 			cp->min_input = analog_channels[i].minInput;
@@ -148,14 +142,11 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 				cp->programmable_gain_amplifier = 1;
 				cgp->range = 0;
 				devc->channel_one_map = ch;
-			}
-			else if (!g_strcmp0(analog_channels[i].name, "CH2")) {
+			} else if (!g_strcmp0(analog_channels[i].name, "CH2")) {
 				cgp->range = 0;
 				cp->programmable_gain_amplifier = 2;
 			}
 			ch->priv = cp;
-			// We have a separate channel group for each channel to support VDIV
-			struct sr_channel_group *cg = g_new0(struct sr_channel_group, 1);
 			cg->name = g_strdup(analog_channels[i].name);
 			cg->channels = g_slist_append(cg->channels, ch);
 			cg->priv = cgp;
@@ -166,10 +157,9 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
 		devc->trigger_channel = devc->channel_one_map;
-
 		devc->data = g_malloc(devc->limits.limit_samples * sizeof(float));
-
 		sdi->priv = devc;
+
 		devices = g_slist_append(devices, sdi);
 		serial_close(serial);
 	}
@@ -195,7 +185,7 @@ static void select_range(const struct sr_channel_group *cg, uint8_t idx)
 {
 	uint16_t gain = GAIN_VALUES[idx];
 	((struct channel_priv *)(((struct sr_channel *)(cg->channels->data))->priv))->gain = gain;
-	sr_dbg("Set gain %d on channel %s", gain, cg->name);
+	sr_info("Set gain %d on channel %s with range %lu V", gain, cg->name, vdivs[idx][0]/vdivs[idx][1]);
 }
 
 static int config_get(uint32_t key, GVariant **data,
@@ -226,10 +216,10 @@ static int config_get(uint32_t key, GVariant **data,
 			return SR_ERR_NA;
 		}
 	} else {
-		if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
-			return SR_ERR_ARG;
 		switch (key) {
 		case SR_CONF_VDIV:
+			if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
+				return SR_ERR_ARG;
 			idx = ((struct channel_group_priv *)(cg->priv))->range;
 			*data = g_variant_new("(tt)", vdivs[idx][0], vdivs[idx][1]);
 			break;
@@ -248,6 +238,7 @@ static int config_set(uint32_t key, GVariant *data,
 	uint8_t idx;
 
 	devc = sdi->priv;
+
 	if (!cg) {
 		switch (key) {
 		case SR_CONF_LIMIT_SAMPLES:
@@ -258,10 +249,6 @@ static int config_set(uint32_t key, GVariant *data,
 		case SR_CONF_TRIGGER_SOURCE:
 			devc->trigger_enabled = TRUE;
 			name = g_variant_get_string(data,0);
-			if (!(name[2]=='C' || name[2]<'4')) {
-				sr_spew("Can not set channel %s as Trigger", name);
-				return SR_ERR_ARG;
-			}
 			assign_channel(name, devc->trigger_channel, sdi->channels);
 			break;
 		case SR_CONF_TRIGGER_LEVEL:
@@ -272,13 +259,14 @@ static int config_set(uint32_t key, GVariant *data,
 			return SR_ERR_NA;
 		}
 	} else {
-		if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
-			return SR_ERR_ARG;
-
 		switch (key) {
 		case SR_CONF_VDIV:
+			if (g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
+				return SR_ERR_ARG;
+
 			if ((idx = std_u64_tuple_idx(data, ARRAY_AND_SIZE(vdivs))) < 0)
 				return SR_ERR_ARG;
+
 			((struct channel_group_priv *)(cg->priv))->range = idx;
 			select_range(cg, idx);
 			break;
@@ -297,6 +285,7 @@ static int config_list(uint32_t key, GVariant **data,
 	struct sr_channel *ch;
 	GSList *l;
 	GVariant **tmp;
+	int i;
 
 	devc = (sdi) ? sdi->priv : NULL;
 
@@ -312,16 +301,12 @@ static int config_list(uint32_t key, GVariant **data,
 			if (!sdi)
 				return SR_ERR_ARG;
 
-			tmp = g_malloc(4 * sizeof(GVariant *));
-			int i = 0;
-			for (l = sdi->channels; l; l = l->next) {
+			tmp = g_malloc(NUM_ANALOG_CHANNELS * sizeof(GVariant *));
+			for (l = sdi->channels, i=0; l; l = l->next, i++) {
 				ch = l->data;
-				if (ch->name[2] == 'C' || ch->name[2] < '4') {
-					tmp[i] = g_variant_new_string(ch->name);
-					i++;
-				}
+				tmp[i] = g_variant_new_string(ch->name);
 			}
-			*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp, 4);
+			*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp, i);
 			break;
 		case SR_CONF_LIMIT_SAMPLES:
 			*data = std_gvar_tuple_u64(MIN_SAMPLES, MAX_SAMPLES);
@@ -330,16 +315,17 @@ static int config_list(uint32_t key, GVariant **data,
 			return SR_ERR_NA;
 		}
 	} else {
-		if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
-			return SR_ERR_ARG;
-
 		switch (key) {
 		case SR_CONF_DEVICE_OPTIONS:
 			*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
 			break;
 		case SR_CONF_VDIV:
+			if (g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
+				return SR_ERR_ARG;
+
 			if (!devc)
 				return SR_ERR_ARG;
+
 			*data = std_gvar_tuple_array(ARRAY_AND_SIZE(vdivs));
 			break;
 		default:
@@ -358,13 +344,12 @@ static int configure_channels(const struct sr_dev_inst *sdi)
 
 	g_slist_free(devc->enabled_channels);
 	devc->enabled_channels = NULL;
-	memset(devc->ch_enabled, 0, sizeof(devc->ch_enabled));
 
 	for (l = sdi->channels; l; l = l->next) {
 		ch = l->data;
 		if(ch->enabled) {
 			devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);
-			sr_spew("enabled channels: {} %s", ch->name);
+			sr_info("enabled channels: {} %s", ch->name);
 		}
 	}
 	return SR_OK;
@@ -389,35 +374,31 @@ static uint64_t lookup_maximum_samplerate(guint channels, gboolean trigger)
 static int check_args(guint channels,uint64_t samples ,uint64_t samplerate, gboolean trigger)
 {
 	if(channels > 4) {
-		sr_dbg("Number of channels to sample must be 1, 2, 3, or 4");
+		sr_err("Number of channels to sample must be 1, 2, 3, or 4");
 		return SR_ERR_ARG;
 	}
 
 	if(samples < 0 || samples > (MAX_SAMPLES/channels)) {
-		sr_dbg("Invalid number of samples");
+		sr_err("Invalid number of samples");
 		return SR_ERR_ARG;
 	}
 
 	if(samplerate > lookup_maximum_samplerate(channels, trigger)) {
-		sr_dbg("Samplerate must be less than %llu", lookup_maximum_samplerate(channels, trigger));
+		sr_err("Samplerate must be less than %lu", lookup_maximum_samplerate(channels, trigger));
 		return SR_ERR_SAMPLERATE;
 	}
 
 	return SR_OK;
 }
 
-static int configure_oscilloscope(const struct sr_dev_inst *sdi) {
+static void configure_oscilloscope(const struct sr_dev_inst *sdi)
+{
 	GSList *l;
 	struct dev_context *devc = sdi->priv;
 	struct sr_channel *ch;
 
 	for (l = devc->enabled_channels; l; l = l->next) {
 		ch = l->data;
-		// can only sample from CH1, CH2, CH3 and MIC
-		if (!(ch->name[2]=='C' || ch->name[2]<'4')) {
-			sr_spew("Can not sample from channel %s", ch->name);
-			return SR_ERR_ARG;
-		}
 		set_gain(sdi, ch, ((struct channel_priv *)(ch->priv))->gain);
 		if (g_slist_length(devc->enabled_channels) == 1)
 			devc->channel_one_map = ch;
@@ -428,34 +409,29 @@ static int configure_oscilloscope(const struct sr_dev_inst *sdi) {
 	if(devc->trigger_enabled)
 		configure_trigger(sdi);
 
-	return SR_OK;
 }
 
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 {
 	int ret;
-	struct dev_context *devc = sdi->priv;
+	struct dev_context *devc;
 	struct sr_serial_dev_inst *serial;
 	configure_channels(sdi);
 
+	serial = sdi->conn;
+	devc = sdi->priv;
+
 	if (!devc->enabled_channels)
 		return SR_ERR;
-
-	if (pslab_init(sdi) != SR_OK)
-		return SR_ERR;
-
-	sr_sw_limits_acquisition_start(&devc->limits);
-
-	serial = sdi->conn;
 
 	switch(devc->mode) {
 	case SR_CONF_OSCILLOSCOPE:
 		ret = check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled);
 		if(ret !=SR_OK)
 			return ret;
-		if(configure_oscilloscope(sdi) != SR_OK)
-			return SR_ERR_ARG;
+
+		configure_oscilloscope(sdi);
 		caputure_oscilloscope(sdi);
 		break;
 	default:
