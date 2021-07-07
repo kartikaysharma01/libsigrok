@@ -439,6 +439,22 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	return SR_OK;
 }
 
+static int dev_acquisition_stop(struct sr_dev_inst *sdi)
+{
+	struct dev_context *devc;
+
+	devc = sdi->priv;
+
+	std_session_send_df_end(sdi);
+
+	g_slist_free(devc->enabled_channels);
+	devc->enabled_channels = NULL;
+	g_free(devc->short_int_buffer);
+
+
+	return SR_OK;
+}
+
 static struct sr_dev_driver pslab_driver_info = {
 	.name = "pslab",
 	.longname = "PSLab",

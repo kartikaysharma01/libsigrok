@@ -87,9 +87,6 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 		devc->channel_entry = devc->channel_entry->next;
 	} else {
 		/* Samples collected from all channels. */
-		g_free(devc->short_int_buffer);
-		g_free(devc->enabled_channels);
-		std_session_send_df_frame_end(sdi);
 		sr_dev_acquisition_stop(sdi);
 	}
 
