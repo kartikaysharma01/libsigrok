@@ -76,7 +76,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	struct sr_serial_dev_inst *serial;
 	struct sr_dev_inst *sdi;
 	struct dev_context *devc;
-	const char *path, *serialcomm = "1000000/8n1";
+	const char *path = NULL, *serialcomm = "1000000/8n1";
 	char *device_path, *version;
 	int i;
 
