@@ -166,20 +166,20 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			pslab_write_u8(serial, cmd, 2);
 		}
 	} else if (g_slist_length(devc->enabled_channels) == 2) {
-		struct sr_channel *ch;
+		struct sr_channel ch;
 		assign_channel(ch234[0], ch, devc->enabled_channels);
-		struct channel_priv *cp = ch->priv;
-		pslab_set_resolution(ch, 10);
+		struct channel_priv *cp = ch.priv;
+		pslab_set_resolution(&ch, 10);
 		cp->buffer_idx = (int)devc->limits.limit_samples;
 
 		uint8_t cmd[] = {CAPTURE_TWO, (0x80 * devc->trigger_enabled)};
 		pslab_write_u8(serial, cmd, 2);
 	} else {
 		for (i=0; i<3; i++) {
-			struct sr_channel *ch;
+			struct sr_channel ch;
 			assign_channel(ch234[i], ch, devc->enabled_channels);
-			struct channel_priv *cp = ch->priv;
-			pslab_set_resolution(ch, 10);
+			struct channel_priv *cp = ch.priv;
+			pslab_set_resolution(&ch, 10);
 			cp->buffer_idx = (i + 1) * (int)devc->limits.limit_samples;
 		}
 		uint8_t cmd[] = {CAPTURE_FOUR, (chosa | (0 << 4) | (0x80 * devc->trigger_enabled))};
@@ -260,7 +260,7 @@ SR_PRIV int pslab_set_gain(const struct sr_dev_inst *sdi,
 	sr_info("Set gain of channel %s to %d", ch->name, gain);
 	struct sr_serial_dev_inst *serial;
 	struct channel_priv *cp;
-	uint8_t gain_idx;
+	int gain_idx;
 
 	if(g_strcmp0(ch->name,"CH1") && g_strcmp0(ch->name,"CH2")) {
 		sr_info("Analog gain is not available on %s", ch->name);
@@ -276,7 +276,7 @@ SR_PRIV int pslab_set_gain(const struct sr_dev_inst *sdi,
 		return SR_ERR_ARG;
 	}
 
-	uint8_t cmd[] = {ADC, SET_PGA_GAIN, cp->programmable_gain_amplifier, gain_idx};
+	uint8_t cmd[] = {ADC, SET_PGA_GAIN, cp->programmable_gain_amplifier, (uint8_t)gain_idx};
 	pslab_write_u8(serial, cmd, 4);
 
 	if (pslab_get_ack(sdi) != SR_OK) {
@@ -355,17 +355,17 @@ SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi)
 }
 
 SR_PRIV int assign_channel(const char* channel_name,
-			  const struct sr_channel *target, GSList* list)
+			   struct sr_channel target, GSList* list)
 {
+	sr_info("Assign channel %s from list to target", channel_name);
 	GSList *l;
 	struct sr_channel *ch;
 	for(l = list; l ; l = l->next) {
 		ch = l->data;
 		if(!g_strcmp0(ch->name, channel_name)) {
-			target = ch;
-			return SR_ERR_ARG;
+			target = *ch;
+			return SR_OK;
 		}
 	}
-	target = NULL;
-	return SR_OK;
+	return SR_ERR_ARG;
 }

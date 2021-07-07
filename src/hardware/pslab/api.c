@@ -223,7 +223,7 @@ static int config_set(uint32_t key, GVariant *data,
 {
 	struct dev_context *devc;
 	const char *name;
-	uint8_t idx;
+	int idx;
 
 	devc = sdi->priv;
 
@@ -237,7 +237,7 @@ static int config_set(uint32_t key, GVariant *data,
 		case SR_CONF_TRIGGER_SOURCE:
 			devc->trigger_enabled = TRUE;
 			name = g_variant_get_string(data,0);
-			if (assign_channel(name, devc->trigger_channel, sdi->channels) != SR_OK)
+			if (assign_channel(name, *devc->trigger_channel, sdi->channels) != SR_OK)
 				return SR_ERR_ARG;
 			break;
 		case SR_CONF_TRIGGER_LEVEL:
@@ -257,7 +257,7 @@ static int config_set(uint32_t key, GVariant *data,
 				return SR_ERR_ARG;
 
 			((struct channel_group_priv *)(cg->priv))->range = idx;
-			select_range(cg, idx);
+			select_range(cg, (uint8_t)idx);
 			break;
 		default:
 			return SR_ERR_NA;
