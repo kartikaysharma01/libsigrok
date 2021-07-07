@@ -165,6 +165,12 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devices = g_slist_append(devices, sdi);
 		serial_close(serial);
 	}
+
+	if (!devices)
+		sr_serial_dev_inst_free(serial);
+
+	g_slist_free(device_paths_v5);
+	g_slist_free(device_paths_v6);
 	return std_scan_complete(di, devices);
 }
 
@@ -450,6 +456,7 @@ static int dev_acquisition_stop(struct sr_dev_inst *sdi)
 	g_slist_free(devc->enabled_channels);
 	devc->enabled_channels = NULL;
 	g_free(devc->short_int_buffer);
+	g_free(devc->data);
 
 	return SR_OK;
 }
