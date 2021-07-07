@@ -150,7 +150,6 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	struct channel_priv *cp_map = devc->channel_one_map->priv;
 	set_resolution(devc->channel_one_map,10);
 	int chosa = cp_map->chosa;
-	cp_map->samples_in_buffer = devc->limits.limit_samples;
 	cp_map->buffer_idx = 0;
 
 	uint8_t *commands;
@@ -190,7 +189,6 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			if(!g_strcmp0(ch->name, "CH2")) {
 				struct channel_priv *cp = ch->priv;
 				set_resolution(ch,10);
-				cp->samples_in_buffer = devc->limits.limit_samples;
 				cp->buffer_idx = (int)devc->limits.limit_samples;
 				break;
 			}
@@ -209,7 +207,6 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			{
 				struct channel_priv *cp = ch->priv;
 				set_resolution(ch,10);
-				cp->samples_in_buffer = devc->limits.limit_samples;
 				cp->buffer_idx = (i) * (int)devc->limits.limit_samples;
 			}
 		}
