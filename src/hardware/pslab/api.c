@@ -111,7 +111,8 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			continue;
 
 		version = pslab_get_version(serial);
-		gboolean isPSLabDevice = g_str_has_prefix(version, "PSLab") || g_str_has_prefix(version, "CSpark");
+		gboolean isPSLabDevice = g_str_has_prefix(version, "PSLab") ||
+			g_str_has_prefix(version, "CSpark");
 		if (!isPSLabDevice) {
 			g_free(version);
 			serial_close(serial);
@@ -129,7 +130,8 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->version = version;
 
 		for (i = 0; i < NUM_ANALOG_CHANNELS; i++) {
-			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index, SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
+			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index,
+				SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
 			struct channel_priv *cp = g_new0(struct channel_priv, 1);
 			struct sr_channel_group *cg = g_new0(struct sr_channel_group, 1);
 			struct channel_group_priv *cgp =  g_new0(struct channel_group_priv, 1);
@@ -166,26 +168,12 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	return std_scan_complete(di, devices);
 }
 
-static int assign_channel(const char* channel_name, const struct sr_channel *target, GSList* list)
-{
-	GSList *l;
-	struct sr_channel *ch;
-	for(l = list; l ; l = l->next) {
-		ch = l->data;
-		if(!g_strcmp0(ch->name, channel_name)) {
-			target = ch;
-			return 1;
-		}
-	}
-	target = NULL;
-	return 0;
-}
-
 static void select_range(const struct sr_channel_group *cg, uint8_t idx)
 {
 	uint16_t gain = GAIN_VALUES[idx];
 	((struct channel_priv *)(((struct sr_channel *)(cg->channels->data))->priv))->gain = gain;
-	sr_info("Set gain %d on channel %s with range %lu V", gain, cg->name, vdivs[idx][0]/vdivs[idx][1]);
+	sr_info("Set gain %d on channel %s with range %lu V",
+		gain, cg->name, vdivs[idx][0]/vdivs[idx][1]);
 }
 
 static int config_get(uint32_t key, GVariant **data,
@@ -249,7 +237,8 @@ static int config_set(uint32_t key, GVariant *data,
 		case SR_CONF_TRIGGER_SOURCE:
 			devc->trigger_enabled = TRUE;
 			name = g_variant_get_string(data,0);
-			assign_channel(name, devc->trigger_channel, sdi->channels);
+			if (assign_channel(name, devc->trigger_channel, sdi->channels) != SR_OK)
+				return SR_ERR_ARG;
 			break;
 		case SR_CONF_TRIGGER_LEVEL:
 			devc->trigger_enabled = TRUE;
@@ -371,20 +360,22 @@ static uint64_t lookup_maximum_samplerate(guint channels, gboolean trigger)
 	return min_samplerates[channels_idx[channels-1][1]][trigger];
 }
 
-static int check_args(guint channels,uint64_t samples ,uint64_t samplerate, gboolean trigger)
+static int check_args(guint channels,uint64_t samples ,uint64_t samplerate,
+		      gboolean trigger)
 {
-	if(channels > 4) {
+	if (channels > 4) {
 		sr_err("Number of channels to sample must be 1, 2, 3, or 4");
 		return SR_ERR_ARG;
 	}
 
-	if(samples > (MAX_SAMPLES/channels)) {
+	if (samples > (MAX_SAMPLES/channels)) {
 		sr_err("Invalid number of samples");
 		return SR_ERR_ARG;
 	}
 
-	if(samplerate > lookup_maximum_samplerate(channels, trigger)) {
-		sr_err("Samplerate must be less than %lu", lookup_maximum_samplerate(channels, trigger));
+	if (samplerate > lookup_maximum_samplerate(channels, trigger)) {
+		sr_err("Samplerate must be less than %lu",
+		       lookup_maximum_samplerate(channels, trigger));
 		return SR_ERR_SAMPLERATE;
 	}
 
@@ -404,9 +395,9 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 			devc->channel_one_map = ch;
 	}
 
-	if(!devc->trigger_channel)
+	if (!devc->trigger_channel)
 		devc->trigger_channel = devc->channel_one_map;
-	if(devc->trigger_enabled)
+	if (devc->trigger_enabled)
 		pslab_configure_trigger(sdi);
 
 }
@@ -427,12 +418,13 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 
 	switch(devc->mode) {
 	case SR_CONF_OSCILLOSCOPE:
-		ret = check_args(g_slist_length(devc->enabled_channels), devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled);
+		ret = check_args(g_slist_length(devc->enabled_channels),
+				 devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled);
 		if(ret !=SR_OK)
 			return ret;
 
 		configure_oscilloscope(sdi);
-			pslab_caputure_oscilloscope(sdi);
+		pslab_caputure_oscilloscope(sdi);
 		break;
 	default:
 		break;

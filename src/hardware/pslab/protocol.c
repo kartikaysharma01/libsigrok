@@ -56,7 +56,8 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	samples_collected = 0;
 
 	for (i = 0; i < (int)devc->limits.limit_samples; i++) {
-		if (serial_read_blocking(serial, devc->short_int_buffer, 2 , serial_timeout(serial, 2)) < 2) {
+		if (serial_read_blocking(serial, devc->short_int_buffer, 2 ,
+					 serial_timeout(serial, 2)) < 2) {
 			sr_dbg("Failed to read buffer properly, samples read = %d", samples_collected);
 			break;
 		}
@@ -97,7 +98,8 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 SR_PRIV void pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t cmd[], int count)
 {
 	for (int i = 0; i < count; i++) {
-		int bytes_written = serial_write_blocking(serial, &cmd[i], 1, serial_timeout(serial, 1));
+		int bytes_written = serial_write_blocking(serial, &cmd[i], 1,
+							  serial_timeout(serial, 1));
 
 		if(bytes_written < 1)
 			sr_dbg("Failed to write command %d to device.", cmd[i]);
@@ -108,7 +110,8 @@ SR_PRIV void pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t cmd[], in
 SR_PRIV void pslab_write_u16(struct sr_serial_dev_inst* serial, uint16_t val[], int count)
 {
 	for (int i = 0; i < count; i++) {
-		int bytes_written = serial_write_blocking(serial, &val[i], 2, serial_timeout(serial, 2));
+		int bytes_written = serial_write_blocking(serial, &val[i], 2,
+							  serial_timeout(serial, 2));
 		if(bytes_written < 2)
 			sr_dbg("Failed to write command %d to device.", val[i]);
 	}
@@ -133,8 +136,8 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	struct dev_context *devc;
 	struct sr_serial_dev_inst *serial;
 	int i, chosa;
-	GSList *l;
 	struct channel_priv *cp_map;
+	char *ch234[3] = {"CH2", "CH3", "MIC"};
 
 	devc = sdi->priv;
 	serial = sdi->conn;
@@ -163,25 +166,21 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			pslab_write_u8(serial, cmd, 2);
 		}
 	} else if (g_slist_length(devc->enabled_channels) == 2) {
-		for (l=devc->enabled_channels; l; l=l->next) {
-			struct sr_channel *ch = l->data;
-			if (!g_strcmp0(ch->name, "CH2")) {
-				struct channel_priv *cp = ch->priv;
-				pslab_set_resolution(ch, 10);
-				cp->buffer_idx = (int)devc->limits.limit_samples;
-				break;
-			}
-		}
+		struct sr_channel *ch;
+		assign_channel(ch234[0], ch, devc->enabled_channels);
+		struct channel_priv *cp = ch->priv;
+		pslab_set_resolution(ch, 10);
+		cp->buffer_idx = (int)devc->limits.limit_samples;
+
 		uint8_t cmd[] = {CAPTURE_TWO, (0x80 * devc->trigger_enabled)};
 		pslab_write_u8(serial, cmd, 2);
 	} else {
-		for (i=0, l=devc->enabled_channels; l; l=l->next,i++) {
-			struct sr_channel *ch = l->data;
-			if (g_strcmp0(ch->name, "CH1")) {
-				struct channel_priv *cp = ch->priv;
-				pslab_set_resolution(ch, 10);
-				cp->buffer_idx = (i) * (int)devc->limits.limit_samples;
-			}
+		for (i=0; i<3; i++) {
+			struct sr_channel *ch;
+			assign_channel(ch234[i], ch, devc->enabled_channels);
+			struct channel_priv *cp = ch->priv;
+			pslab_set_resolution(ch, 10);
+			cp->buffer_idx = (i + 1) * (int)devc->limits.limit_samples;
 		}
 		uint8_t cmd[] = {CAPTURE_FOUR, (chosa | (0 << 4) | (0x80 * devc->trigger_enabled))};
 		pslab_write_u8(serial, cmd, 2);
@@ -217,7 +216,8 @@ SR_PRIV int pslab_fetch_data(const struct sr_dev_inst *sdi)
 	uint8_t cmd[] = {COMMON, RETRIEVE_BUFFER};
 	pslab_write_u8(serial, cmd, 2);
 
-	uint16_t val[] = {((struct channel_priv *)(ch->priv))->buffer_idx , devc->limits.limit_samples};
+	uint16_t val[] = {((struct channel_priv *)(ch->priv))->buffer_idx ,
+		devc->limits.limit_samples};
 	pslab_write_u16(serial, val, 2);
 
 	return SR_OK;
@@ -254,7 +254,8 @@ SR_PRIV gboolean pslab_progress(const struct sr_dev_inst *sdi)
 	return capturing_complete;
 }
 
-SR_PRIV int pslab_set_gain(const struct sr_dev_inst *sdi, const struct sr_channel *ch, uint16_t gain)
+SR_PRIV int pslab_set_gain(const struct sr_dev_inst *sdi,
+	const struct sr_channel *ch, uint16_t gain)
 {
 	sr_info("Set gain of channel %s to %d", ch->name, gain);
 	struct sr_serial_dev_inst *serial;
@@ -350,5 +351,21 @@ SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi)
 		return SR_ERR_IO;
 	}
 
+	return SR_OK;
+}
+
+SR_PRIV int assign_channel(const char* channel_name,
+			  const struct sr_channel *target, GSList* list)
+{
+	GSList *l;
+	struct sr_channel *ch;
+	for(l = list; l ; l = l->next) {
+		ch = l->data;
+		if(!g_strcmp0(ch->name, channel_name)) {
+			target = ch;
+			return SR_ERR_ARG;
+		}
+	}
+	target = NULL;
 	return SR_OK;
 }
