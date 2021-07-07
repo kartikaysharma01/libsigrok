@@ -451,7 +451,6 @@ static int dev_acquisition_stop(struct sr_dev_inst *sdi)
 	devc->enabled_channels = NULL;
 	g_free(devc->short_int_buffer);
 
-
 	return SR_OK;
 }
 
@@ -470,7 +469,7 @@ static struct sr_dev_driver pslab_driver_info = {
 	.dev_open = std_serial_dev_open,
 	.dev_close = std_serial_dev_close,
 	.dev_acquisition_start = dev_acquisition_start,
-	.dev_acquisition_stop = std_serial_dev_acquisition_stop,
+	.dev_acquisition_stop = dev_acquisition_stop,
 	.context = NULL,
 };
 SR_REGISTER_DEV_DRIVER(pslab_driver_info);
