@@ -107,39 +107,45 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	return TRUE;
 }
 
-SR_PRIV int pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t buf[], int count)
+SR_PRIV void pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t cmd[], int count)
 {
 	for (int i = 0; i < count; i++) {
-		serial_write_blocking(serial, &buf[i], 1, serial_timeout(serial, 1));
+		serial_write_blocking(serial, &cmd[i], 1, serial_timeout(serial, 1));
+	}
+
+}
+
+SR_PRIV void pslab_write_u16(struct sr_serial_dev_inst* serial, uint16_t cmd[], int count)
+{
+	for (int i = 0; i < count; i++) {
+		serial_write_blocking(serial, &cmd[i], 2, serial_timeout(serial, 2));
 	}
 }
 
-SR_PRIV int pslab_write_u16(struct sr_serial_dev_inst* serial)
-{
-	return SR_OK;
-}
 
-SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial, uint8_t c1, uint8_t c2 )
+SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial)
 {
-	uint8_t buf[] = {COMMON, VERSION_COMMAND};
+	uint8_t cmd[] = {COMMON, VERSION_COMMAND};
 	char *buffer = g_malloc0(16);
 	int len = 15;
-	pslab_write_u8(serial, buf, 2);
+	pslab_write_u8(serial, cmd, 2);
 	serial_readline(serial, &buffer, &len, serial_timeout(serial, sizeof(buffer)));
 	return buffer;
 }
 
 SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 {
-	// invalidate_buffer()
-	struct dev_context *devc = sdi->priv;
-	struct sr_serial_dev_inst *serial = sdi->conn;
-	int i;
+	struct dev_context *devc;
+	struct sr_serial_dev_inst *serial;
+	int i, chosa;
 	GSList *l;
+	struct channel_priv *cp_map;
 
-	struct channel_priv *cp_map = devc->channel_one_map->priv;
+	devc = sdi->priv;
+	serial = sdi->conn;
+	cp_map = devc->channel_one_map->priv;
 	set_resolution(devc->channel_one_map,10);
-	int chosa = cp_map->chosa;
+	chosa = cp_map->chosa;
 	cp_map->buffer_idx = 0;
 
 	uint8_t *commands;
@@ -147,33 +153,21 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	*commands = ADC;
 	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
 
-	if(g_slist_length(devc->enabled_channels) == 1)
-	{
-		if(devc->trigger_enabled)
-		{
-			*commands = CAPTURE_ONE;
-			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-			*commands = chosa | 0x80;
-			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	if(g_slist_length(devc->enabled_channels) == 1) {
+		if(devc->trigger_enabled) {
+			uint8_t cmd[] = {CAPTURE_ONE, (chosa | 0x80)};
+			pslab_write_u8(serial, cmd, 2);
+		}
 
-		}
-		if(devc->samplerate <= 1000000)
-		{
+		if(devc->samplerate <= 1000000) {
+			uint8_t cmd[] = {CAPTURE_DMASPEED, (chosa | 0x80)};
 			set_resolution(devc->channel_one_map,12);
-			*commands = CAPTURE_DMASPEED;
-			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-			*commands = chosa | 0x80;
-			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+			pslab_write_u8(serial, cmd, 2);
+		} else {
+			uint8_t cmd[] = {CAPTURE_DMASPEED, chosa};
+			pslab_write_u8(serial, cmd, 2);
 		}
-		else
-		{
-			*commands = CAPTURE_DMASPEED;
-			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-			*commands = chosa;
-			serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-		}
-	}
-	else if(g_slist_length(devc->enabled_channels) == 2) {
+	} else if(g_slist_length(devc->enabled_channels) == 2) {
 		for(l=devc->enabled_channels; l; l=l->next) {
 			struct sr_channel *ch = l->data;
 			if(!g_strcmp0(ch->name, "CH2")) {
@@ -183,13 +177,9 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 				break;
 			}
 		}
-		*commands = CAPTURE_TWO;
-		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-		*commands = chosa | (0x80 * devc->trigger_enabled);
-		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-	}
-	else
-	{
+		uint8_t cmd[] = {CAPTURE_TWO, (0x80 * devc->trigger_enabled)};
+		pslab_write_u8(serial, cmd, 2);
+	} else {
 		for(i=0, l=devc->enabled_channels; l; l=l->next,i++)
 		{
 			struct sr_channel *ch = l->data;
@@ -200,51 +190,20 @@ SR_PRIV void caputure_oscilloscope(const struct sr_dev_inst *sdi)
 				cp->buffer_idx = (i) * (int)devc->limits.limit_samples;
 			}
 		}
-		*commands = CAPTURE_FOUR;
-		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-		*commands = chosa | (0 << 4) | (0x80 * devc->trigger_enabled);
-		serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+		uint8_t cmd[] = {CAPTURE_FOUR, (chosa | (0 << 4) | (0x80 * devc->trigger_enabled))};
+		pslab_write_u8(serial, cmd, 2);
 	}
 
-	uint16_t samplecount = devc->limits.limit_samples;
-	uint16_t timegap = (int)(8000000/devc->samplerate);
-	serial_write_blocking(serial,&samplecount, 2, serial_timeout(serial, 2));
-	serial_write_blocking(serial,&timegap, 2, serial_timeout(serial, 2));
+	uint16_t cmd[] = {devc->limits.limit_samples, (int)(8000000/devc->samplerate)};
+	pslab_write_u16(serial, cmd, 2);
 
 	if (get_ack(sdi) != SR_OK)
 		sr_dbg("Failed to capture samples");
 
-	// test
 	g_usleep(1000000 * devc->limits.limit_samples / devc->samplerate);
 
 	while(!progress(sdi))
 		continue;
-
-//	*commands = COMMON;
-//	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-//	*commands = RETRIEVE_BUFFER;
-//	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
-//	uint16_t startingposition = 0 ;
-//	serial_write_blocking(serial,&startingposition, 2, serial_timeout(serial, 2));
-//	uint16_t samples = samplecount ;
-//	serial_write_blocking(serial,&samplecount, 2, serial_timeout(serial,  2));
-
-//	for(int j=0; j<samplecount; j++)
-//	{
-//		uint16_t *buf2 = g_malloc0(2);
-//		serial_read_blocking(serial,buf2,2, serial_timeout(serial,2));
-//		uint16_t output = *buf2;
-//		sr_dbg("ln 198 output == %d", output);
-//	}
-//
-//	if (get_ack(sdi) == SR_OK)
-//		sr_dbg("Successful to fetch buffer");
-
-
-//	return SR_OK;
-
-
-//	fetch_data(sdi);
 
 }
 
@@ -370,7 +329,6 @@ SR_PRIV float scale(const struct sr_channel *ch, uint16_t raw_value)
 	struct channel_priv *cp = ch->priv;
 	float slope = (float)((cp->max_input - cp->min_input) / cp->resolution * cp->gain);
 	float intercept = (float)(cp->min_input/cp->gain);
-	float x = slope * raw_value + intercept;
 	return slope * raw_value + intercept;
 }
 

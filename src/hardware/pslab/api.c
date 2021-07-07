@@ -110,7 +110,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		if (serial_open(serial, SERIAL_RDWR) != SR_OK)
 			continue;
 
-		version = pslab_get_version(serial, COMMON, VERSION_COMMAND);
+		version = pslab_get_version(serial);
 		gboolean isPSLabDevice = g_str_has_prefix(version, "PSLab") || g_str_has_prefix(version, "CSpark");
 		if(!isPSLabDevice) {
 			g_free(version);
@@ -379,7 +379,7 @@ static int check_args(guint channels,uint64_t samples ,uint64_t samplerate, gboo
 		return SR_ERR_ARG;
 	}
 
-	if(samples < 0 || samples > (MAX_SAMPLES/channels)) {
+	if(samples > (MAX_SAMPLES/channels)) {
 		sr_err("Invalid number of samples");
 		return SR_ERR_ARG;
 	}
