@@ -363,7 +363,6 @@ SR_PRIV int assign_channel(const char* channel_name,
 	GSList *l;
 	struct sr_channel *ch;
 
-	g_free(target);
 	target = NULL;
 
 	for(l = list; l ; l = l->next) {
