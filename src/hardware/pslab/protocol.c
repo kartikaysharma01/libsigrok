@@ -87,9 +87,10 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 		devc->channel_entry = devc->channel_entry->next;
 	} else {
 		/* Samples collected from al channels. */
+		g_slist_free(devc->channel_entry);
+		g_slist_free(devc->enabled_channels);
 		std_session_send_df_frame_end(sdi);
 		sr_dev_acquisition_stop(sdi);
-
 	}
 
 	return TRUE;
@@ -146,10 +147,8 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	chosa = cp_map->chosa;
 	cp_map->buffer_idx = 0;
 
-	uint8_t *commands;
-	commands = g_malloc0(sizeof(uint8_t));
-	*commands = ADC;
-	serial_write_blocking(serial,commands, 1, serial_timeout(serial, 1));
+	uint8_t command[] = {ADC};
+	pslab_write_u8(serial, command, 1);
 
 	if (g_slist_length(devc->enabled_channels) == 1) {
 		if (devc->trigger_enabled) {
@@ -362,8 +361,6 @@ SR_PRIV int assign_channel(const char* channel_name,
 	sr_info("Assign channel %s from list to target", channel_name);
 	GSList *l;
 	struct sr_channel *ch;
-
-	target = NULL;
 
 	for(l = list; l ; l = l->next) {
 		ch = l->data;
