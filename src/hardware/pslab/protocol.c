@@ -348,9 +348,11 @@ SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi)
 
 	if(!(*buf & 0x01) || !(*buf)) {
 		sr_dbg("Did not receive ACK or Received non ACK byte while waiting for ACK.");
+		g_free(buf);
 		return SR_ERR_IO;
 	}
 
+	g_free(buf);
 	return SR_OK;
 }
 
@@ -360,6 +362,10 @@ SR_PRIV int assign_channel(const char* channel_name,
 	sr_info("Assign channel %s from list to target", channel_name);
 	GSList *l;
 	struct sr_channel *ch;
+
+	g_free(target);
+	target = NULL;
+
 	for(l = list; l ; l = l->next) {
 		ch = l->data;
 		if(!g_strcmp0(ch->name, channel_name)) {
