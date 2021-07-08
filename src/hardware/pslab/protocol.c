@@ -166,17 +166,18 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 		}
 	} else if (g_slist_length(devc->enabled_channels) == 2) {
 		struct sr_channel* ch = g_malloc0(sizeof(struct sr_channel));
-		assign_channel(ch234[0], ch, devc->enabled_channels);
-		struct channel_priv *cp = ch->priv;
-		pslab_set_resolution(ch, 10);
-		cp->buffer_idx = (int)devc->limits.limit_samples;
-
+		if (assign_channel(ch234[0], ch, devc->enabled_channels) == SR_OK) {
+			struct channel_priv *cp = ch->priv;
+			pslab_set_resolution(ch, 10);
+			cp->buffer_idx = (int) devc->limits.limit_samples;
+		}
 		uint8_t cmd[] = {CAPTURE_TWO, (0x80 * devc->trigger_enabled)};
 		pslab_write_u8(serial, cmd, 2);
 	} else {
-		for (i = 0; i < (int)g_slist_length(devc->enabled_channels)-1; i++) {
+		for (i = 0; i < 3; i++) {
 			struct sr_channel* ch = g_malloc0(sizeof (struct sr_channel));
-			assign_channel(ch234[i], ch, devc->enabled_channels);
+			if (assign_channel(ch234[i], ch, devc->enabled_channels) != SR_OK)
+				break;
 			struct channel_priv *cp = ch->priv;
 			pslab_set_resolution(ch, 10);
 			cp->buffer_idx = (i + 1) * (int)devc->limits.limit_samples;
