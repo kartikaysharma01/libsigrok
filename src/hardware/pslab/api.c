@@ -380,10 +380,12 @@ static int config_list(uint32_t key, GVariant **data,
 				return SR_ERR_ARG;
 
 			tmp = g_malloc(NUM_ANALOG_CHANNELS * sizeof(GVariant *));
-			for (l = sdi->channels, i=0; l; l = l->next, i++) {
+			for (l = sdi->channels, i=0; l; l = l->next) {
 				ch = l->data;
-				if (ch->type == SR_CHANNEL_ANALOG)
+				if (ch->type == SR_CHANNEL_ANALOG) {
 					tmp[i] = g_variant_new_string(ch->name);
+					i++;
+				}
 			}
 			*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp, i);
 			break;
