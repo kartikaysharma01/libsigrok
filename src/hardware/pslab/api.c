@@ -194,6 +194,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
 		devc->trigger_channel = devc->channel_one_map;
+		devc->frequency = 0;
 		sdi->priv = devc;
 
 		devices = g_slist_append(devices, sdi);
@@ -237,6 +238,7 @@ static int config_get(uint32_t key, GVariant **data,
 			*data = g_variant_new_double(devc->trigger_voltage);
 			break;
 		case SR_CONF_OUTPUT_FREQUENCY:
+			sr_dbg("GOAT: get freq ln 241, %f", devc->frequency);
 			*data = g_variant_new_double(devc->frequency);
 		default:
 			return SR_ERR_NA;
@@ -256,6 +258,7 @@ static int config_get(uint32_t key, GVariant **data,
 					ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
 				docgp = cg->priv;
 				*data = g_variant_new_double(docgp->duty_cycle);
+				sr_dbg("GOAT: get duty cycle ln 261, = %f", docgp->duty_cycle);
 				break;
 			}
 			return SR_ERR_ARG;
@@ -264,6 +267,7 @@ static int config_get(uint32_t key, GVariant **data,
 			    ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
 				docgp = cg->priv;
 				*data = g_variant_new_double(docgp->phase);
+				sr_dbg("GOAT: get phase ln 261, = %f", docgp->phase);
 				break;
 			}
 			return SR_ERR_ARG;
@@ -303,7 +307,9 @@ static int config_set(uint32_t key, GVariant *data,
 			devc->trigger_voltage = g_variant_get_double(data);
 			break;
 		case SR_CONF_OUTPUT_FREQUENCY:
+			sr_dbg("GOAT: here to set freq ln 310, = %f", g_variant_get_double(data));
 			devc->frequency = g_variant_get_double(data);
+			sr_dbg("GOAT: set freq ln 312, = %f", devc->frequency);
 			break;
 		default:
 			return SR_ERR_NA;
@@ -323,18 +329,22 @@ static int config_set(uint32_t key, GVariant *data,
 			select_range(cg, (uint8_t)idx);
 			break;
 		case SR_CONF_DUTY_CYCLE:
+			sr_dbg("GOAT: here to set duty cycle ln 332, = %f", g_variant_get_double(data));
 			if (ch->type == SR_CHANNEL_LOGIC &&
 			    		ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
 				docgp = cg->priv;
 				docgp->duty_cycle = g_variant_get_double(data);
+				sr_dbg("GOAT: set duty cycle ln 337, = %f", docgp->duty_cycle);
 				break;
 			}
 			return SR_ERR_ARG;
 		case SR_CONF_PHASE:
+			sr_dbg("GOAT: here to set phase ln 342, = %f", g_variant_get_double(data));
 			if (ch->type == SR_CHANNEL_LOGIC &&
 					ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
 				docgp = cg->priv;
 				docgp->phase = g_variant_get_double(data);
+				sr_dbg("GOAT: set phase ln 347, = %f", docgp->phase);
 				break;
 			}
 			return SR_ERR_ARG;
