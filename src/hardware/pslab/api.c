@@ -34,6 +34,7 @@ static const uint32_t scanopts[] = {
 
 static const uint32_t drvopts[] = {
 		SR_CONF_OSCILLOSCOPE,
+		SR_CONF_SIGNAL_GENERATOR,
 };
 
 static const uint32_t devopts[] = {
@@ -45,6 +46,9 @@ static const uint32_t devopts[] = {
 
 static const uint32_t devopts_cg[] = {
 		SR_CONF_VDIV | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+		SR_CONF_DUTY_CYCLE | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_PHASE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+		SR_CONF_OUTPUT_FREQUENCY | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 };
 
 static const struct analog_channel analog_channels[] = {
@@ -76,6 +80,10 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	struct sr_serial_dev_inst *serial;
 	struct sr_dev_inst *sdi;
 	struct dev_context *devc;
+	struct sr_channel *dch;
+	struct sr_channel_group *docg, *dcg;
+	struct digital_output_cg_priv *docgp;
+	char channel_name[16];
 	const char *path = NULL, *serialcomm = "1000000/8n1";
 	char *device_path, *version;
 	int i;
@@ -154,6 +162,30 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			cg->priv = cgp;
 			sdi->channel_groups = g_slist_append(sdi->channel_groups, cg);
 		}
+
+		/* Digital Output  channel group with all digital output channels in it. */
+		docg = g_malloc0(sizeof(struct sr_channel_group));
+		docg->name = g_strdup("Digital Output");
+		sdi->channel_groups = g_slist_append(sdi->channel_groups, docg);
+
+		for (i = 0; i < NUM_DIGITAL_OUTPUT_CHANNEL; i++) {
+			snprintf(channel_name, 16, "SQ%d", i+1);
+			dch = sr_channel_new(sdi, i + NUM_ANALOG_CHANNELS, SR_CHANNEL_LOGIC,
+					    TRUE, channel_name);
+			docg->channels = g_slist_append(docg->channels, dch);
+
+			/* Every digital output channel gets its own channel group as well. */
+			dcg = g_malloc0(sizeof(struct sr_channel_group));
+			docgp = g_malloc0(sizeof(struct digital_output_cg_priv));
+			dcg->name = g_strdup(channel_name);
+			dcg->channels = g_slist_append(NULL, dch);
+			docgp->duty_cycle = 0;
+			docgp->phase = 0;
+//			docgp->state = (char) g_strdup("LOW");
+			dcg->priv = docgp;
+			sdi->channel_groups = g_slist_append(sdi->channel_groups, dcg);
+		}
+
 		sr_sw_limits_init(&devc->limits);
 		devc->mode = SR_CONF_OSCILLOSCOPE;
 		devc->samplerate = 2000;

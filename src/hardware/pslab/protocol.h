@@ -27,6 +27,7 @@
 
 #define LOG_PREFIX "pslab"
 #define NUM_ANALOG_CHANNELS 4
+#define NUM_DIGITAL_OUTPUT_CHANNEL 4
 
 #define MAX_SAMPLES 10000
 #define COMMON 0x0b
@@ -99,6 +100,12 @@ struct channel_group_priv {
 	int range;
 };
 
+
+struct digital_output_cg_priv {
+    int duty_cycle;
+    int phase;
+    char state;
+};
 
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data);
 SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial);
