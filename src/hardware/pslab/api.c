@@ -47,7 +47,7 @@ static const uint32_t devopts[] = {
 
 static const uint32_t devopts_cg[] = {
 		SR_CONF_VDIV | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
-		SR_CONF_DUTY_CYCLE | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_DUTY_CYCLE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 		SR_CONF_PHASE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 };
 
@@ -71,7 +71,11 @@ static const uint64_t vdivs[][2] = {
 		{ 500, 1000 },
 };
 
+static const double output_freq_min_max_step[] = { 10, 10000000, 1 };
+
 static const double phase_min_max_step[] = { 0.0, 360.0, 0.001 };
+
+static const double duty_cycle_min_max_step[] = { 0.0, 100.0, 0.001 };
 
 static struct sr_dev_driver pslab_driver_info;
 
@@ -340,7 +344,7 @@ static int config_set(uint32_t key, GVariant *data,
 			return SR_ERR_ARG;
 		case SR_CONF_PHASE:
 			sr_dbg("GOAT: here to set phase ln 342, = %f", g_variant_get_double(data));
-			if (ch->type == SR_CHANNEL_LOGIC &&
+			if (ch->type == SR_CHANNEL_LOGIC && g_strcmp0(cg->name, "SQ1") &&
 					ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
 				docgp = cg->priv;
 				docgp->phase = g_variant_get_double(data);
@@ -393,12 +397,14 @@ static int config_list(uint32_t key, GVariant **data,
 			*data = std_gvar_tuple_u64(MIN_SAMPLES, MAX_SAMPLES);
 			break;
 		case SR_CONF_OUTPUT_FREQUENCY:
-			*data = std_gvar_min_max_step_array(phase_min_max_step);
+			*data = std_gvar_min_max_step_array(output_freq_min_max_step);
 			break;
 		default:
 			return SR_ERR_NA;
 		}
 	} else {
+		ch = cg->channels->data;
+
 		switch (key) {
 		case SR_CONF_DEVICE_OPTIONS:
 			*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
@@ -413,9 +419,16 @@ static int config_list(uint32_t key, GVariant **data,
 			*data = std_gvar_tuple_array(ARRAY_AND_SIZE(vdivs));
 			break;
 		case SR_CONF_PHASE:
-			if (ch->type == SR_CHANNEL_LOGIC &&
+			if (ch->type == SR_CHANNEL_LOGIC && g_strcmp0(cg->name, "SQ1") &&
 			    		ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
 				*data = std_gvar_min_max_step_array(phase_min_max_step);
+				break;
+			}
+			return SR_ERR_ARG;
+		case SR_CONF_DUTY_CYCLE:
+			if (ch->type == SR_CHANNEL_LOGIC &&
+			    		ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
+				*data = std_gvar_min_max_step_array(duty_cycle_min_max_step);
 				break;
 			}
 			return SR_ERR_ARG;
@@ -433,14 +446,22 @@ static int configure_channels(const struct sr_dev_inst *sdi)
 	const GSList *l;
 	struct sr_channel *ch;
 
-	g_slist_free(devc->enabled_channels);
-	devc->enabled_channels = NULL;
+	g_slist_free(devc->enabled_channels_analog);
+	devc->enabled_channels_analog = NULL;
+	g_slist_free(devc->enabled_digital_output);
+	devc->enabled_digital_output = NULL;
 
 	for (l = sdi->channels; l; l = l->next) {
 		ch = l->data;
-		if(ch->enabled) {
-			devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);
-			sr_info("enabled channels: {} %s", ch->name);
+		if (ch->enabled && ch->type == SR_CHANNEL_ANALOG) {
+			devc->enabled_channels_analog = g_slist_append(devc->enabled_channels_analog, ch);
+			sr_info("Analog enabled channels: {} %s", ch->name);
+		} else if (ch->enabled && ch->type == SR_CHANNEL_LOGIC) {
+			if(ch->index < NUM_ANALOG_CHANNELS + NUM_DIGITAL_OUTPUT_CHANNEL) {
+				devc->pwm = TRUE;
+				devc->enabled_channels_analog = g_slist_append(devc->enabled_digital_output, ch);
+				sr_info("Digital Output enabled channels: {} %s", ch->name);
+			}
 		}
 	}
 	return SR_OK;
@@ -490,10 +511,10 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 	struct dev_context *devc = sdi->priv;
 	struct sr_channel *ch;
 
-	for (l = devc->enabled_channels; l; l = l->next) {
+	for (l = devc->enabled_channels_analog; l; l = l->next) {
 		ch = l->data;
 		pslab_set_gain(sdi, ch, ((struct channel_priv *) (ch->priv))->gain);
-		if (g_slist_length(devc->enabled_channels) == 1)
+		if (g_slist_length(devc->enabled_channels_analog) == 1)
 			devc->channel_one_map = ch;
 	}
 
@@ -515,12 +536,16 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	serial = sdi->conn;
 	devc = sdi->priv;
 
-	if (!devc->enabled_channels)
+	if (!devc->enabled_channels_analog && !devc->enabled_digital_output)
 		return SR_ERR;
+
+	if (devc->pwm) {
+
+	}
 
 	switch(devc->mode) {
 	case SR_CONF_OSCILLOSCOPE:
-		ret = check_args(g_slist_length(devc->enabled_channels),
+		ret = check_args(g_slist_length(devc->enabled_channels_analog),
 				 devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled);
 		if(ret !=SR_OK)
 			return ret;
@@ -532,7 +557,7 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 		break;
 	}
 
-	devc->channel_entry = devc->enabled_channels;
+	devc->channel_entry = devc->enabled_channels_analog;
 	std_session_send_df_header(sdi);
 
 	serial_source_add(sdi->session, serial, G_IO_IN, 10,

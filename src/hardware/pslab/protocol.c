@@ -88,7 +88,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	} else {
 		/* Samples collected from al channels. */
 		g_slist_free(devc->channel_entry);
-		g_slist_free(devc->enabled_channels);
+		g_slist_free(devc->enabled_channels_analog);
 		std_session_send_df_frame_end(sdi);
 		sr_dev_acquisition_stop(sdi);
 	}
@@ -150,7 +150,7 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	uint8_t command[] = {ADC};
 	pslab_write_u8(serial, command, 1);
 
-	if (g_slist_length(devc->enabled_channels) == 1) {
+	if (g_slist_length(devc->enabled_channels_analog) == 1) {
 		if (devc->trigger_enabled) {
 			uint8_t cmd[] = {CAPTURE_ONE, (chosa | 0x80)};
 			pslab_write_u8(serial, cmd, 2);
@@ -164,9 +164,9 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			uint8_t cmd[] = {CAPTURE_DMASPEED, chosa};
 			pslab_write_u8(serial, cmd, 2);
 		}
-	} else if (g_slist_length(devc->enabled_channels) == 2) {
+	} else if (g_slist_length(devc->enabled_channels_analog) == 2) {
 		struct sr_channel* ch = g_malloc0(sizeof(struct sr_channel));
-		if (assign_channel(ch234[0], ch, devc->enabled_channels) == SR_OK) {
+		if (assign_channel(ch234[0], ch, devc->enabled_channels_analog) == SR_OK) {
 			struct channel_priv *cp = ch->priv;
 			pslab_set_resolution(ch, 10);
 			cp->buffer_idx = (int) devc->limits.limit_samples;
@@ -176,7 +176,7 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 	} else {
 		for (i = 0; i < 3; i++) {
 			struct sr_channel* ch = g_malloc0(sizeof (struct sr_channel));
-			if (assign_channel(ch234[i], ch, devc->enabled_channels) != SR_OK)
+			if (assign_channel(ch234[i], ch, devc->enabled_channels_analog) != SR_OK)
 				break;
 			struct channel_priv *cp = ch->priv;
 			pslab_set_resolution(ch, 10);

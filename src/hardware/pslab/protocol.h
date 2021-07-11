@@ -66,10 +66,12 @@ struct dev_context {
 
 	/* PWM generator */
 	double frequency;
+	GSList * enabled_digital_output;
+	gboolean pwm;
 
 	/* Acquisition settings */
 	uint64_t samplerate;
-	GSList * enabled_channels;
+	GSList * enabled_channels_analog;
 	struct sr_channel *channel_one_map;
 	struct sr_sw_limits limits;
 
