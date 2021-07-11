@@ -42,13 +42,13 @@ static const uint32_t devopts[] = {
 		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 		SR_CONF_TRIGGER_LEVEL | SR_CONF_GET | SR_CONF_SET,
+		SR_CONF_OUTPUT_FREQUENCY | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 };
 
 static const uint32_t devopts_cg[] = {
 		SR_CONF_VDIV | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 		SR_CONF_DUTY_CYCLE | SR_CONF_GET | SR_CONF_SET,
 		SR_CONF_PHASE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
-		SR_CONF_OUTPUT_FREQUENCY | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 };
 
 static const struct analog_channel analog_channels[] = {
@@ -70,6 +70,8 @@ static const uint64_t vdivs[][2] = {
 		/* millivolts */
 		{ 500, 1000 },
 };
+
+static const double phase_min_max_step[] = { 0.0, 360.0, 0.001 };
 
 static struct sr_dev_driver pslab_driver_info;
 
@@ -212,6 +214,8 @@ static int config_get(uint32_t key, GVariant **data,
 					  const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
+	struct sr_channel *ch;
+	struct digital_output_cg_priv *docgp;
 	int idx;
 
 	if (!sdi)
@@ -232,17 +236,37 @@ static int config_get(uint32_t key, GVariant **data,
 		case SR_CONF_TRIGGER_LEVEL:
 			*data = g_variant_new_double(devc->trigger_voltage);
 			break;
+		case SR_CONF_OUTPUT_FREQUENCY:
+			*data = g_variant_new_double(devc->frequency);
 		default:
 			return SR_ERR_NA;
 		}
 	} else {
+		ch = cg->channels->data;
+
 		switch (key) {
 		case SR_CONF_VDIV:
-			if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
+			if (g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
 				return SR_ERR_ARG;
 			idx = ((struct channel_group_priv *)(cg->priv))->range;
 			*data = g_variant_new("(tt)", vdivs[idx][0], vdivs[idx][1]);
 			break;
+		case SR_CONF_DUTY_CYCLE:
+			if (ch->type == SR_CHANNEL_LOGIC &&
+					ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
+				docgp = cg->priv;
+				*data = g_variant_new_double(docgp->duty_cycle);
+				break;
+			}
+			return SR_ERR_ARG;
+		case SR_CONF_PHASE:
+			if (ch->type == SR_CHANNEL_LOGIC &&
+			    ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
+				docgp = cg->priv;
+				*data = g_variant_new_double(docgp->phase);
+				break;
+			}
+			return SR_ERR_ARG;
 		default:
 			return SR_ERR_NA;
 		}
@@ -254,6 +278,8 @@ static int config_set(uint32_t key, GVariant *data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
+	struct sr_channel *ch;
+	struct digital_output_cg_priv *docgp;
 	const char *name;
 	int idx;
 
@@ -276,10 +302,15 @@ static int config_set(uint32_t key, GVariant *data,
 			devc->trigger_enabled = TRUE;
 			devc->trigger_voltage = g_variant_get_double(data);
 			break;
+		case SR_CONF_OUTPUT_FREQUENCY:
+			devc->frequency = g_variant_get_double(data);
+			break;
 		default:
 			return SR_ERR_NA;
 		}
 	} else {
+		ch = cg->channels->data;
+
 		switch (key) {
 		case SR_CONF_VDIV:
 			if (g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
@@ -291,6 +322,22 @@ static int config_set(uint32_t key, GVariant *data,
 			((struct channel_group_priv *)(cg->priv))->range = idx;
 			select_range(cg, (uint8_t)idx);
 			break;
+		case SR_CONF_DUTY_CYCLE:
+			if (ch->type == SR_CHANNEL_LOGIC &&
+			    		ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
+				docgp = cg->priv;
+				docgp->duty_cycle = g_variant_get_double(data);
+				break;
+			}
+			return SR_ERR_ARG;
+		case SR_CONF_PHASE:
+			if (ch->type == SR_CHANNEL_LOGIC &&
+					ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
+				docgp = cg->priv;
+				docgp->phase = g_variant_get_double(data);
+				break;
+			}
+			return SR_ERR_ARG;
 		default:
 			return SR_ERR_NA;
 		}
@@ -332,6 +379,9 @@ static int config_list(uint32_t key, GVariant **data,
 		case SR_CONF_LIMIT_SAMPLES:
 			*data = std_gvar_tuple_u64(MIN_SAMPLES, MAX_SAMPLES);
 			break;
+		case SR_CONF_OUTPUT_FREQUENCY:
+			*data = std_gvar_min_max_step_array(phase_min_max_step);
+			break;
 		default:
 			return SR_ERR_NA;
 		}
@@ -349,6 +399,13 @@ static int config_list(uint32_t key, GVariant **data,
 
 			*data = std_gvar_tuple_array(ARRAY_AND_SIZE(vdivs));
 			break;
+		case SR_CONF_PHASE:
+			if (ch->type == SR_CHANNEL_LOGIC &&
+			    		ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
+				*data = std_gvar_min_max_step_array(phase_min_max_step);
+				break;
+			}
+			return SR_ERR_ARG;
 		default:
 			return SR_ERR_NA;
 		}

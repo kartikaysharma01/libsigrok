@@ -64,6 +64,9 @@ struct dev_context {
 	struct sr_channel *trigger_channel;
 	double trigger_voltage;
 
+	/* PWM generator */
+	double frequency;
+
 	/* Acquisition settings */
 	uint64_t samplerate;
 	GSList * enabled_channels;
@@ -102,8 +105,8 @@ struct channel_group_priv {
 
 
 struct digital_output_cg_priv {
-    int duty_cycle;
-    int phase;
+    double duty_cycle;
+    double phase;
     char state;
 };
 
