@@ -242,8 +242,10 @@ static int config_set(uint32_t key, GVariant *data,
 		case SR_CONF_TRIGGER_SOURCE:
 			devc->trigger_enabled = TRUE;
 			name = g_variant_get_string(data,0);
+			sr_dbg("ln 245 set trigger to channel of name %s ", name);
 			if (assign_channel(name, devc->trigger_channel, sdi->channels) != SR_OK)
 				return SR_ERR_ARG;
+			sr_dbg("ln 248 , trigger channel set as name = %s index %d", devc->trigger_channel->name , devc->trigger_channel->index);
 			break;
 		case SR_CONF_TRIGGER_LEVEL:
 			devc->trigger_enabled = TRUE;
@@ -404,8 +406,10 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 			devc->channel_one_map = ch;
 	}
 
-	if (!devc->trigger_channel)
+	if (!devc->trigger_channel) {
+		sr_dbg("ln 410 , trigger chanel was found null");
 		devc->trigger_channel = devc->channel_one_map;
+	}
 	if (devc->trigger_enabled)
 		pslab_configure_trigger(sdi);
 

@@ -316,6 +316,9 @@ SR_PRIV void pslab_configure_trigger(const struct sr_dev_inst *sdi)
 	if (pslab_get_ack(sdi) != SR_OK)
 		sr_dbg("Could not configure trigger on channel %s, voltage = %f raw value = %d",
 			devc->trigger_channel->name, devc->trigger_voltage, level);
+
+//	devc->trigger_channel = NULL;
+	devc->trigger_enabled = FALSE;
 }
 
 SR_PRIV float pslab_scale(const struct sr_channel *ch, uint16_t raw_value)
