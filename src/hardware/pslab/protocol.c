@@ -250,6 +250,7 @@ SR_PRIV gboolean pslab_progress(const struct sr_dev_inst *sdi)
 	serial_read_blocking(serial,buf2,2, serial_timeout(serial,2));
 	uint16_t samples_read = *buf2;
 
+	sr_dbg("Samples Read = %d", samples_read);
 	if (pslab_get_ack(sdi) != SR_OK)
 		sr_dbg("Failed in knowing capturing status");
 
@@ -299,44 +300,54 @@ SR_PRIV void pslab_configure_trigger(const struct sr_dev_inst *sdi)
 	serial = sdi->conn;
 
 	sr_info("Configuring trigger on channel %s at %f Volts",
-		devc->trigger_channel->name, devc->trigger_voltage);
+		devc->trigger_channel.name, devc->trigger_voltage);
 
-	if (devc->trigger_channel->name == devc->channel_one_map->name)
+	if (devc->trigger_channel.name == devc->channel_one_map->name)
 		channel = 0;
 	else
-		channel = devc->trigger_channel->index;
+		channel = devc->trigger_channel.index;
 
 	uint8_t cmd[] = {ADC, CONFIGURE_TRIGGER, (0 << 4) | (1 << channel)};
 	pslab_write_u8(serial, cmd, 3);
-	uint16_t level = pslab_unscale(devc->trigger_channel, devc->trigger_voltage);
+	uint16_t level = pslab_unscale(&devc->trigger_channel, devc->trigger_voltage);
 	serial_write_blocking(serial,&level, 2, serial_timeout(serial, 2));
 
 	if (pslab_get_ack(sdi) != SR_OK)
 		sr_dbg("Could not configure trigger on channel %s, voltage = %f raw value = %d",
-			devc->trigger_channel->name, devc->trigger_voltage, level);
+			devc->trigger_channel.name, devc->trigger_voltage, level);
+
+	devc->trigger_enabled = FALSE;
 }
 
 SR_PRIV float pslab_scale(const struct sr_channel *ch, uint16_t raw_value)
 {
-	struct channel_priv *cp = ch->priv;
-	float slope = (float)((cp->max_input - cp->min_input) / cp->resolution * cp->gain);
-	float intercept = (float)(cp->min_input/cp->gain);
+	sr_info("Scaling raw value %d to voltage", raw_value);
+	struct channel_priv *cp;
+	float slope, intercept;
+
+	cp = ch->priv;
+	slope = (float)((cp->max_input - cp->min_input) / cp->resolution * cp->gain);
+	intercept = (float)(cp->min_input/cp->gain);
 	return slope * (float)raw_value + intercept;
 }
 
 SR_PRIV int pslab_unscale(const struct sr_channel *ch, double voltage)
 {
+	sr_info("Scaling voltage %f to raw value", voltage);
 	struct channel_priv *cp;
+	double slope, intercept;
+	int level;
 
 	cp = ch->priv;
-	double slope = (cp->max_input/cp->gain - cp->min_input/cp->gain) / cp->resolution;
-	double intercept = cp->min_input/cp->gain;
-	int level = (int)((voltage - intercept) / slope);
+	slope = (cp->max_input/cp->gain - cp->min_input/cp->gain) / cp->resolution;
+	intercept = cp->min_input/cp->gain;
+	level = (int)((voltage - intercept) / slope);
 	if (level < 0)
-		level =0;
+		level = 0;
 	else if (level > cp->resolution )
 		level = (int)cp->resolution;
 
+	sr_dbg("Unscaled Voltage = %d", level);
 	return level;
 }
 
