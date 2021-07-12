@@ -138,7 +138,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 					    TRUE, analog_channels[i].name);
 			cp = g_new0(struct channel_priv, 1);
 			cg = g_new0(struct sr_channel_group, 1);
-			cgp =  g_new0(struct channel_group_priv, 1);
+			cgp = g_new0(struct channel_group_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
 			cp->min_input = analog_channels[i].minInput;
 			cp->max_input = analog_channels[i].maxInput;
@@ -243,6 +243,7 @@ static int config_set(uint32_t key, GVariant *data,
 			devc->trigger_enabled = TRUE;
 			name = g_variant_get_string(data,0);
 			sr_dbg("ln 245 set trigger to channel of name %s ", name);
+			devc->trigger_channel = NULL;
 			if (assign_channel(name, devc->trigger_channel, sdi->channels) != SR_OK)
 				return SR_ERR_ARG;
 			sr_dbg("ln 248 , trigger channel set as name = %s index %d", devc->trigger_channel->name , devc->trigger_channel->index);
