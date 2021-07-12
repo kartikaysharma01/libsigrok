@@ -76,6 +76,10 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	struct sr_serial_dev_inst *serial;
 	struct sr_dev_inst *sdi;
 	struct dev_context *devc;
+	struct sr_channel *ch;
+	struct channel_priv *cp;
+	struct sr_channel_group *cg;
+	struct channel_group_priv *cgp;
 	const char *path = NULL, *serialcomm = "1000000/8n1";
 	char *device_path, *version;
 	int i;
@@ -130,11 +134,11 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->version = version;
 
 		for (i = 0; i < NUM_ANALOG_CHANNELS; i++) {
-			struct sr_channel *ch = sr_channel_new(sdi, analog_channels[i].index,
-				SR_CHANNEL_ANALOG, TRUE, analog_channels[i].name);
-			struct channel_priv *cp = g_new0(struct channel_priv, 1);
-			struct sr_channel_group *cg = g_new0(struct sr_channel_group, 1);
-			struct channel_group_priv *cgp =  g_new0(struct channel_group_priv, 1);
+			ch = sr_channel_new(sdi, analog_channels[i].index,SR_CHANNEL_ANALOG,
+					    TRUE, analog_channels[i].name);
+			cp = g_new0(struct channel_priv, 1);
+			cg = g_new0(struct sr_channel_group, 1);
+			cgp =  g_new0(struct channel_group_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
 			cp->min_input = analog_channels[i].minInput;
 			cp->max_input = analog_channels[i].maxInput;
@@ -156,7 +160,8 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		}
 		sr_sw_limits_init(&devc->limits);
 		devc->mode = SR_CONF_OSCILLOSCOPE;
-		devc->samplerate = 2000;
+		devc->samplerate = 200000;
+		devc->limits.limit_samples = 2000;
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
 		devc->trigger_channel = devc->channel_one_map;
@@ -327,9 +332,11 @@ static int config_list(uint32_t key, GVariant **data,
 
 static int configure_channels(const struct sr_dev_inst *sdi)
 {
-	struct dev_context *devc = sdi->priv;
+	struct dev_context *devc;
 	const GSList *l;
 	struct sr_channel *ch;
+
+	devc = sdi->priv;
 
 	g_slist_free(devc->enabled_channels);
 	devc->enabled_channels = NULL;
@@ -385,8 +392,10 @@ static int check_args(guint channels,uint64_t samples ,uint64_t samplerate,
 static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 {
 	GSList *l;
-	struct dev_context *devc = sdi->priv;
+	struct dev_context *devc ;
 	struct sr_channel *ch;
+
+	devc = sdi->priv;
 
 	for (l = devc->enabled_channels; l; l = l->next) {
 		ch = l->data;

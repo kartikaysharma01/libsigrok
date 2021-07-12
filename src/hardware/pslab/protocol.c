@@ -87,6 +87,8 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 		devc->channel_entry = devc->channel_entry->next;
 	} else {
 		/* Samples collected from al channels. */
+		devc->channel_entry = NULL;
+		devc->enabled_channels = NULL;
 		g_slist_free(devc->channel_entry);
 		g_slist_free(devc->enabled_channels);
 		std_session_send_df_frame_end(sdi);
@@ -269,10 +271,10 @@ SR_PRIV int pslab_set_gain(const struct sr_dev_inst *sdi,
 
 	serial = sdi->conn;
 	cp = ch->priv;
-	gain_idx = std_u8_idx(g_variant_new_uint16(gain), GAIN_VALUES, 8);
+	gain_idx = std_u64_idx(g_variant_new_uint64(gain), GAIN_VALUES, 8);
 
 	if (gain_idx < 0) {
-		sr_dbg("Invalid gain value");
+		sr_dbg("Invalid gain value %d", gain);
 		return SR_ERR_ARG;
 	}
 
