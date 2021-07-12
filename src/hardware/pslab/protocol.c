@@ -199,6 +199,11 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 
 }
 
+SR_PRIV void pslab_generatee_pwm(const struct sr_dev_inst *sdi)
+{
+
+}
+
 SR_PRIV int pslab_fetch_data(const struct sr_dev_inst *sdi)
 {
 	struct dev_context *devc;

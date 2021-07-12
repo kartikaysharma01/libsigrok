@@ -28,6 +28,7 @@
 #define LOG_PREFIX "pslab"
 #define NUM_ANALOG_CHANNELS 4
 #define NUM_DIGITAL_OUTPUT_CHANNEL 4
+#define HIGH_FREQUENCY_LIMIT 1e7
 
 #define MAX_SAMPLES 10000
 #define COMMON 0x0b
@@ -120,6 +121,7 @@ SR_PRIV void pslab_set_resolution(const struct sr_channel *ch, int resolution);
 SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi);
 SR_PRIV void pslab_configure_trigger(const struct sr_dev_inst *sdi);
 SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi);
+SR_PRIV void pslab_generate_pwm(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_fetch_data(const struct sr_dev_inst *sdi);
 SR_PRIV gboolean pslab_progress(const struct sr_dev_inst *sdi);
 SR_PRIV float pslab_scale(const struct sr_channel *ch, uint16_t raw_value);

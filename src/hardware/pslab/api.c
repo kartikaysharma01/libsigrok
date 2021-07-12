@@ -185,8 +185,11 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			docgp = g_malloc0(sizeof(struct digital_output_cg_priv));
 			dcg->name = g_strdup(channel_name);
 			dcg->channels = g_slist_append(NULL, dch);
-			docgp->duty_cycle = 0;
-			docgp->phase = 0;
+			docgp->duty_cycle = 50;
+			if (!g_strcmp0(channel_name, "SQ1"))
+				docgp->phase = 0;
+			else
+				docgp->phase = 90;
 //			docgp->state = (char) g_strdup("LOW");
 			dcg->priv = docgp;
 			sdi->channel_groups = g_slist_append(sdi->channel_groups, dcg);
@@ -505,6 +508,23 @@ static int check_args(guint channels,uint64_t samples ,uint64_t samplerate,
 	return SR_OK;
 }
 
+static int configure_pwm(const struct sr_dev_inst *sdi)
+{
+	GSList *l;
+	struct dev_context *devc;
+	struct sr_channel *ch;
+
+	devc = sdi->priv;
+
+	if (devc->frequency > HIGH_FREQUENCY_LIMIT || devc->frequency < 0) {
+		sr_info("Frequency should be greater than 0 and less than 10 MHz");
+		return SR_ERR_ARG;
+	}
+
+	pslab_generate_pwm(sdi);
+
+}
+
 static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 {
 	GSList *l;
@@ -540,7 +560,7 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 		return SR_ERR;
 
 	if (devc->pwm) {
-
+		configure_pwm(sdi);
 	}
 
 	switch(devc->mode) {
