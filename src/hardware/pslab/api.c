@@ -243,6 +243,7 @@ static int config_set(uint32_t key, GVariant *data,
 			devc->trigger_enabled = TRUE;
 			name = g_variant_get_string(data,0);
 			sr_dbg("ln 245 set trigger to channel of name %s ", name);
+			g_free(devc->trigger_channel);
 			devc->trigger_channel = NULL;
 			if (assign_channel(name, devc->trigger_channel, sdi->channels) != SR_OK)
 				return SR_ERR_ARG;
