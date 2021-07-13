@@ -58,6 +58,13 @@ static const struct analog_channel analog_channels[] = {
 		{"MIC", 3,2,-3.3,3.3},
 };
 
+static const struct digital_output_channel digital_output[] = {
+	{"SQ1", 0x10},
+	{"SQ2", 0x20},
+	{"SQ3", 0x40},
+	{"SQ4", 0x80},
+};
+
 static const uint64_t vdivs[][2] = {
 		/* volts */
 		{ 16, 1 },
@@ -89,7 +96,6 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	struct sr_channel *dch;
 	struct sr_channel_group *docg, *dcg;
 	struct digital_output_cg_priv *docgp;
-	char channel_name[16];
 	const char *path = NULL, *serialcomm = "1000000/8n1";
 	char *device_path, *version;
 	int i;
@@ -175,22 +181,19 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->channel_groups = g_slist_append(sdi->channel_groups, docg);
 
 		for (i = 0; i < NUM_DIGITAL_OUTPUT_CHANNEL; i++) {
-			snprintf(channel_name, 16, "SQ%d", i+1);
 			dch = sr_channel_new(sdi, i + NUM_ANALOG_CHANNELS, SR_CHANNEL_LOGIC,
-					    TRUE, channel_name);
+					    FALSE, digital_output[i].name);
 			docg->channels = g_slist_append(docg->channels, dch);
 
 			/* Every digital output channel gets its own channel group as well. */
 			dcg = g_malloc0(sizeof(struct sr_channel_group));
 			docgp = g_malloc0(sizeof(struct digital_output_cg_priv));
-			dcg->name = g_strdup(channel_name);
+			dcg->name = g_strdup(digital_output[i].name);
 			dcg->channels = g_slist_append(NULL, dch);
-			docgp->duty_cycle = 50;
-			if (!g_strcmp0(channel_name, "SQ1"))
-				docgp->phase = 0;
-			else
-				docgp->phase = 90;
-//			docgp->state = (char) g_strdup("LOW");
+			docgp->duty_cycle = 0;
+			docgp->phase = 0;
+			docgp->state = g_strdup("LOW");
+			docgp->state_mask = digital_output[i].state_mask;
 			dcg->priv = docgp;
 			sdi->channel_groups = g_slist_append(sdi->channel_groups, dcg);
 		}
@@ -264,7 +267,7 @@ static int config_get(uint32_t key, GVariant **data,
 			if (ch->type == SR_CHANNEL_LOGIC &&
 					ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
 				docgp = cg->priv;
-				*data = g_variant_new_double(docgp->duty_cycle);
+				*data = g_variant_new_double(docgp->duty_cycle * 100);
 				sr_dbg("GOAT: get duty cycle ln 261, = %f", docgp->duty_cycle);
 				break;
 			}
@@ -273,7 +276,7 @@ static int config_get(uint32_t key, GVariant **data,
 			if (ch->type == SR_CHANNEL_LOGIC &&
 			    ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
 				docgp = cg->priv;
-				*data = g_variant_new_double(docgp->phase);
+				*data = g_variant_new_double(docgp->phase * 360);
 				sr_dbg("GOAT: get phase ln 261, = %f", docgp->phase);
 				break;
 			}
@@ -293,6 +296,7 @@ static int config_set(uint32_t key, GVariant *data,
 	struct digital_output_cg_priv *docgp;
 	const char *name;
 	int idx;
+	double tmp;
 
 	devc = sdi->priv;
 
@@ -340,7 +344,9 @@ static int config_set(uint32_t key, GVariant *data,
 			if (ch->type == SR_CHANNEL_LOGIC &&
 			    		ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
 				docgp = cg->priv;
-				docgp->duty_cycle = g_variant_get_double(data);
+				tmp = g_variant_get_double(data);
+				tmp = tmp / 100;
+				docgp->duty_cycle = tmp;
 				sr_dbg("GOAT: set duty cycle ln 337, = %f", docgp->duty_cycle);
 				break;
 			}
@@ -350,7 +356,9 @@ static int config_set(uint32_t key, GVariant *data,
 			if (ch->type == SR_CHANNEL_LOGIC && g_strcmp0(cg->name, "SQ1") &&
 					ch->index < NUM_DIGITAL_OUTPUT_CHANNEL + NUM_ANALOG_CHANNELS) {
 				docgp = cg->priv;
-				docgp->phase = g_variant_get_double(data);
+				tmp = g_variant_get_double(data);
+				tmp = tmp / 360;
+				docgp->phase = tmp;
 				sr_dbg("GOAT: set phase ln 347, = %f", docgp->phase);
 				break;
 			}
@@ -510,9 +518,7 @@ static int check_args(guint channels,uint64_t samples ,uint64_t samplerate,
 
 static int configure_pwm(const struct sr_dev_inst *sdi)
 {
-	GSList *l;
 	struct dev_context *devc;
-	struct sr_channel *ch;
 
 	devc = sdi->priv;
 
@@ -521,7 +527,10 @@ static int configure_pwm(const struct sr_dev_inst *sdi)
 		return SR_ERR_ARG;
 	}
 
+
 	pslab_generate_pwm(sdi);
+	pslab_set_state(sdi);
+
 
 }
 

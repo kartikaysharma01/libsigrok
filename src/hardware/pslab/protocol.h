@@ -29,6 +29,8 @@
 #define NUM_ANALOG_CHANNELS 4
 #define NUM_DIGITAL_OUTPUT_CHANNEL 4
 #define HIGH_FREQUENCY_LIMIT 1e7
+#define CLOCK_RATE 64e6
+
 
 #define MAX_SAMPLES 10000
 #define COMMON 0x0b
@@ -54,7 +56,30 @@
 #define SET_LO_CAPTURE 0x10
 #define RETRIEVE_BUFFER 0x08
 
+/*--------WAVEGEN-----*/
+#define WAVEGEN 0x07
+#define SET_WG 0x01
+#define SET_SQR1 0x03
+#define SET_SQR2 = 0x04
+#define SET_SQRS 0x05
+#define TUNE_SINE_OSCILLATOR 0x06
+#define SQR4 0x07
+#define MAP_REFERENCE 0x08
+#define SET_BOTH_WG 0x09
+#define SET_WAVEFORM_TYPE 0x0a
+#define SELECT_FREQ_REGISTER 0x0b
+#define DELAY_GENERATOR 0x0c
+#define SET_SINE1 0x0d
+#define SET_SINE2 0x0e
+
+/*-----digital outputs----*/
+#define DOUT 0x08
+#define SET_STATE 0x01
+
+
 static const uint8_t GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
+
+static const uint64_t PRESCALERS[] = {1, 8, 64, 256};
 
 struct dev_context {
 	/* device mode */
@@ -69,6 +94,8 @@ struct dev_context {
 	double frequency;
 	GSList * enabled_digital_output;
 	gboolean pwm;
+	int wavelength;
+	int prescaler;
 
 	/* Acquisition settings */
 	uint64_t samplerate;
@@ -107,10 +134,16 @@ struct channel_group_priv {
 };
 
 
+struct digital_output_channel {
+    const char *name;
+    uint8_t state_mask;
+};
+
 struct digital_output_cg_priv {
     double duty_cycle;
     double phase;
-    char state;
+    char *state;
+    uint8_t state_mask;
 };
 
 SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data);
@@ -121,7 +154,9 @@ SR_PRIV void pslab_set_resolution(const struct sr_channel *ch, int resolution);
 SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi);
 SR_PRIV void pslab_configure_trigger(const struct sr_dev_inst *sdi);
 SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi);
-SR_PRIV void pslab_generate_pwm(const struct sr_dev_inst *sdi);
+SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi);
+SR_PRIV int pslab_get_wavelength(double frequency, int table_size, int *timegap, int *prescaler);
+SR_PRIV int pslab_set_state(const struct sr_dev_inst *sdi);
 SR_PRIV int pslab_fetch_data(const struct sr_dev_inst *sdi);
 SR_PRIV gboolean pslab_progress(const struct sr_dev_inst *sdi);
 SR_PRIV float pslab_scale(const struct sr_channel *ch, uint16_t raw_value);

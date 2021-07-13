@@ -199,9 +199,135 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 
 }
 
-SR_PRIV void pslab_generatee_pwm(const struct sr_dev_inst *sdi)
+SR_PRIV int pslab_get_wavelength(double frequency, int table_size, int *timegap, int *prescaler)
 {
+	sr_info("Calculate wavelength for signal generator, frequency = %f table_size = %d", frequency, table_size);
+	int i, tg;
 
+	for (i = 0; i < 4; i++) {
+		tg = (int) round(CLOCK_RATE / frequency / (double)PRESCALERS[i] / table_size);
+
+		if(tg > 0 && tg < (int)pow(2,16)) {
+			*timegap = tg;
+			*prescaler = (int)PRESCALERS[i];
+			return SR_OK;
+		}
+	}
+
+	sr_err("Prescaler out of range, could not calculate wavelength");
+	return SR_ERR_ARG;
+}
+
+SR_PRIV int pslab_set_state(const struct sr_dev_inst *sdi)
+{
+	struct dev_context *devc;
+	struct sr_channel_group *cg;
+	struct sr_channel *ch;
+	struct sr_serial_dev_inst *serial;
+	struct digital_output_cg_priv *cgp;
+	GSList *l;
+	int states = 0, sq;
+
+	for(l = sdi->channel_groups; l; l = l->next) {
+		cg = l->data;
+		ch = cg->channels->data;
+		if (cg->name[1] == 'Q') {
+			cgp = cg->priv;
+			if(g_strcmp0(cgp->state, "LOW"))
+				sq = 0;
+			else if(g_strcmp0(cgp->state, "HIGH"))
+				sq = 1;
+
+			states |= cgp->state_mask | (sq << (ch->index - NUM_ANALOG_CHANNELS));
+		}
+
+	}
+
+	uint8_t cmd[] = {DOUT, SET_STATE, states};
+	pslab_write_u8(serial, cmd, 3);
+
+	pslab_get_ack(sdi);
+}
+
+SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi)
+{
+	struct dev_context *devc;
+	struct sr_channel_group *cg;
+	struct sr_serial_dev_inst *serial;
+	struct digital_output_cg_priv *cgp;
+	GSList *l;
+	uint16_t phases[4], duty[4];
+	int i = 0;
+
+	devc = sdi->priv;
+	serial = sdi->conn;
+
+	if (pslab_get_wavelength(devc->frequency, 1, &devc->wavelength, &devc->prescaler) != SR_OK)
+		return SR_ERR_ARG;
+
+	devc->frequency = CLOCK_RATE / devc->wavelength / devc->prescaler;
+
+	for(l = sdi->channel_groups; l; l = l->next) {
+		cg = l->data;
+		if (cg->name[1] == 'Q') {
+			cgp = cg->priv;
+
+			if (cgp->duty_cycle == 0)
+				cgp->state = "LOW";
+			else if (cgp->duty_cycle == 1)
+				cgp->state = "HIGH";
+			else
+				cgp->state = "PWM";
+
+			duty[i] = (int)fmod(cgp->duty_cycle + cgp->phase, 1) * devc->wavelength;
+			duty[i] = MAX(1, duty[i] - 1);
+			phases[i] = (int)fmod(cgp->phase, 1) * devc->wavelength;
+			phases[i] = MAX(0, phases[i] - 1);
+			i++;
+		}
+
+	}
+
+//	sr_dbg("ln 252 , KHEL RHA H");
+//	for(int j =0 ; j<8l; j++) {
+//		sr_dbg("val[%d] == %d", i , val[i]);
+//	}
+
+	uint8_t cmd[] = {WAVEGEN, SQR4};
+	pslab_write_u8(serial, cmd, 2);
+
+	uint16_t *buf = g_malloc0(2);
+	*buf = devc->wavelength - 1;
+	serial_write_blocking(serial, &buf, 2, serial_timeout(serial,2));
+
+	*buf = duty[0];
+	serial_write_blocking(serial, &buf, 2, serial_timeout(serial,2));
+	*buf = phases[1];
+	serial_write_blocking(serial, &buf, 2, serial_timeout(serial,2));
+	*buf = duty[1];
+	serial_write_blocking(serial, &buf, 2, serial_timeout(serial,2));
+	*buf = phases[2];
+	serial_write_blocking(serial, &buf, 2, serial_timeout(serial,2));
+	*buf = duty[2];
+	serial_write_blocking(serial, &buf, 2, serial_timeout(serial,2));
+	*buf = phases[3];
+	serial_write_blocking(serial, &buf, 2, serial_timeout(serial,2));
+	*buf = duty[3];
+	serial_write_blocking(serial, &buf, 2, serial_timeout(serial,2));
+
+	int prescaler_idx = std_u64_idx(g_variant_new_uint16(devc->prescaler), PRESCALERS, 4);
+
+	if (prescaler_idx < 0) {
+		sr_dbg("Invalid prescaler value");
+		return SR_ERR_ARG;
+	}
+
+	uint8_t cmd1[] = {prescaler_idx | (1 << 5)};
+	pslab_write_u8(serial, cmd1, 1);
+
+	pslab_get_ack(sdi);
+
+	return SR_OK;
 }
 
 SR_PRIV int pslab_fetch_data(const struct sr_dev_inst *sdi)
