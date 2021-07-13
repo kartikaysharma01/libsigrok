@@ -173,7 +173,7 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			pslab_set_resolution(ch, 10);
 			cp->buffer_idx = (int) devc->limits.limit_samples;
 		}
-		uint8_t cmd[] = {CAPTURE_TWO, (0x80 * devc->trigger_enabled)};
+		uint8_t cmd[] = {CAPTURE_TWO, chosa | (0x80 * devc->trigger_enabled)};
 		pslab_write_u8(serial, cmd, 2);
 	} else {
 		for (i = 0; i < 3; i++) {
@@ -316,7 +316,6 @@ SR_PRIV void pslab_configure_trigger(const struct sr_dev_inst *sdi)
 		sr_dbg("Could not configure trigger on channel %s, voltage = %f raw value = %d",
 			devc->trigger_channel.name, devc->trigger_voltage, level);
 
-	devc->trigger_enabled = FALSE;
 }
 
 SR_PRIV float pslab_scale(const struct sr_channel *ch, uint16_t raw_value)
@@ -326,7 +325,7 @@ SR_PRIV float pslab_scale(const struct sr_channel *ch, uint16_t raw_value)
 	float slope, intercept;
 
 	cp = ch->priv;
-	slope = (float)((cp->max_input - cp->min_input) / cp->resolution * cp->gain);
+	slope = (float)((cp->max_input - cp->min_input) / cp->resolution / cp->gain);
 	intercept = (float)(cp->min_input/cp->gain);
 	return slope * (float)raw_value + intercept;
 }
