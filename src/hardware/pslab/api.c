@@ -138,7 +138,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 					    TRUE, analog_channels[i].name);
 			cp = g_new0(struct channel_priv, 1);
 			cg = g_new0(struct sr_channel_group, 1);
-			cgp =  g_new0(struct channel_group_priv, 1);
+			cgp = g_new0(struct channel_group_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
 			cp->min_input = analog_channels[i].minInput;
 			cp->max_input = analog_channels[i].maxInput;
@@ -164,7 +164,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		devc->limits.limit_samples = 2000;
 		devc->trigger_enabled = FALSE;
 		devc->trigger_voltage = 0;
-		devc->trigger_channel = devc->channel_one_map;
+		devc->trigger_channel = *devc->channel_one_map;
 		sdi->priv = devc;
 
 		devices = g_slist_append(devices, sdi);
@@ -200,7 +200,7 @@ static int config_get(uint32_t key, GVariant **data,
 			*data = g_variant_new_uint64(devc->samplerate);
 			break;
 		case SR_CONF_TRIGGER_SOURCE:
-			*data = g_variant_new_string(devc->trigger_channel->name);
+			*data = g_variant_new_string(devc->trigger_channel.name);
 			break;
 		case SR_CONF_TRIGGER_LEVEL:
 			*data = g_variant_new_double(devc->trigger_voltage);
@@ -241,8 +241,8 @@ static int config_set(uint32_t key, GVariant *data,
 			break;
 		case SR_CONF_TRIGGER_SOURCE:
 			devc->trigger_enabled = TRUE;
-			name = g_variant_get_string(data,0);
-			if (assign_channel(name, devc->trigger_channel, sdi->channels) != SR_OK)
+			name = g_variant_get_string(data,NULL);
+			if (assign_channel(name, &devc->trigger_channel, sdi->channels) != SR_OK)
 				return SR_ERR_ARG;
 			break;
 		case SR_CONF_TRIGGER_LEVEL:
@@ -400,12 +400,12 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 	for (l = devc->enabled_channels; l; l = l->next) {
 		ch = l->data;
 		pslab_set_gain(sdi, ch, ((struct channel_priv *) (ch->priv))->gain);
-		if (g_slist_length(devc->enabled_channels) == 1)
+		if (g_slist_length(devc->enabled_channels) == 1) {
 			devc->channel_one_map = ch;
+			devc->trigger_channel = *devc->channel_one_map;
+		}
 	}
 
-	if (!devc->trigger_channel)
-		devc->trigger_channel = devc->channel_one_map;
 	if (devc->trigger_enabled)
 		pslab_configure_trigger(sdi);
 

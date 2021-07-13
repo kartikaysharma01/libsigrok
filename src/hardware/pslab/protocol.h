@@ -60,7 +60,7 @@ struct dev_context {
 
 	/* trigger */
 	gboolean trigger_enabled;
-	struct sr_channel *trigger_channel;
+	struct sr_channel trigger_channel;
 	double trigger_voltage;
 
 	/* Acquisition settings */
