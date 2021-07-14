@@ -251,6 +251,8 @@ SR_PRIV int pslab_set_state(const struct sr_dev_inst *sdi)
 
 SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi)
 {
+	sr_err(" generate pwm ");
+
 	struct dev_context *devc;
 	struct sr_channel_group *cg;
 	struct sr_serial_dev_inst *serial;
@@ -266,6 +268,7 @@ SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi)
 		return SR_ERR_ARG;
 
 	devc->frequency = CLOCK_RATE / devc->wavelength / devc->prescaler;
+	sr_err(" wavelength == %d , prescaler  == %d , frequecvy == %f ", devc->wavelength, devc->prescaler, devc->frequency);
 
 	for(l = sdi->channel_groups; l; l = l->next) {
 		cg = l->data;
@@ -279,19 +282,21 @@ SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi)
 			else
 				cgp->state = "PWM";
 
+			sr_err(" channel grp  == %s , duty cycle  == %f , phase == %f ", cg->name,
+				   cgp->duty_cycle, cgp->phase);
 			duty[i] = (int)fmod(cgp->duty_cycle + cgp->phase, 1) * devc->wavelength;
 			duty[i] = MAX(1, duty[i] - 1);
 			phases[i] = (int)fmod(cgp->phase, 1) * devc->wavelength;
 			phases[i] = MAX(0, phases[i] - 1);
 			i++;
 		}
-
 	}
 
-//	sr_dbg("ln 252 , KHEL RHA H");
-//	for(int j =0 ; j<8l; j++) {
-//		sr_dbg("val[%d] == %d", i , val[i]);
-//	}
+	sr_dbg("ln 252 , KHEL RHA H");
+	for(int j =0 ; j<4 ; j++) {
+		sr_dbg("phases[%d] == %d", j , phases[j]);
+		sr_dbg("duty[%d] == %d", j , duty[j]);
+	}
 
 	uint8_t cmd[] = {WAVEGEN, SQR4};
 	pslab_write_u8(serial, cmd, 2);
