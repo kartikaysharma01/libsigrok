@@ -184,6 +184,8 @@ static void select_range(const struct sr_channel_group *cg, uint8_t idx)
 static int config_get(uint32_t key, GVariant **data,
 					  const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
+	sr_err("LN 233 get -------------------- key == %d data", key);
+
 	struct dev_context *devc;
 	int idx;
 
@@ -230,6 +232,7 @@ static int config_set(uint32_t key, GVariant *data,
 
 	devc = sdi->priv;
 
+	sr_err("LN 233 SET -------------------- key == %d data", key);
 	switch (key) {
 	case SR_CONF_LIMIT_SAMPLES:
 		return sr_sw_limits_config_set(&devc->limits, key, data);
@@ -270,6 +273,7 @@ static int config_set(uint32_t key, GVariant *data,
 static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
+	sr_err("LN 233 list -------------------- key == %d data", key);
 	struct dev_context *devc;
 	struct sr_channel *ch;
 	GSList *l;
