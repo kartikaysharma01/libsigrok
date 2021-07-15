@@ -192,34 +192,32 @@ static int config_get(uint32_t key, GVariant **data,
 
 	devc = sdi->priv;
 
-	if(!cg) {
-		switch (key) {
-		case SR_CONF_LIMIT_SAMPLES:
-			return sr_sw_limits_config_get(&devc->limits, key, data);
-		case SR_CONF_SAMPLERATE:
-			*data = g_variant_new_uint64(devc->samplerate);
-			break;
-		case SR_CONF_TRIGGER_SOURCE:
-			*data = g_variant_new_string(devc->trigger_channel.name);
-			break;
-		case SR_CONF_TRIGGER_LEVEL:
-			*data = g_variant_new_double(devc->trigger_voltage);
-			break;
-		default:
-			return SR_ERR_NA;
-		}
-	} else {
-		switch (key) {
-		case SR_CONF_VDIV:
-			if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
+	switch (key) {
+	case SR_CONF_LIMIT_SAMPLES:
+		return sr_sw_limits_config_get(&devc->limits, key, data);
+	case SR_CONF_SAMPLERATE:
+		*data = g_variant_new_uint64(devc->samplerate);
+		break;
+	case SR_CONF_TRIGGER_SOURCE:
+		*data = g_variant_new_string(devc->trigger_channel.name);
+		break;
+	case SR_CONF_TRIGGER_LEVEL:
+		*data = g_variant_new_double(devc->trigger_voltage);
+		break;
+	case SR_CONF_VDIV:
+		if (cg) {
+			if (g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
 				return SR_ERR_ARG;
-			idx = ((struct channel_group_priv *)(cg->priv))->range;
+			idx = ((struct channel_group_priv *) (cg->priv))->range;
 			*data = g_variant_new("(tt)", vdivs[idx][0], vdivs[idx][1]);
 			break;
-		default:
-			return SR_ERR_NA;
+		} else {
+			return SR_ERR_ARG;
 		}
+	default:
+		return SR_ERR_NA;
 	}
+
 	return SR_OK;
 }
 
@@ -232,41 +230,38 @@ static int config_set(uint32_t key, GVariant *data,
 
 	devc = sdi->priv;
 
-	if (!cg) {
-		switch (key) {
-		case SR_CONF_LIMIT_SAMPLES:
-			return sr_sw_limits_config_set(&devc->limits, key, data);
-		case SR_CONF_SAMPLERATE:
-			devc->samplerate = g_variant_get_uint64(data);
-			break;
-		case SR_CONF_TRIGGER_SOURCE:
-			devc->trigger_enabled = TRUE;
-			name = g_variant_get_string(data,NULL);
-			if (assign_channel(name, &devc->trigger_channel, sdi->channels) != SR_OK)
-				return SR_ERR_ARG;
-			break;
-		case SR_CONF_TRIGGER_LEVEL:
-			devc->trigger_enabled = TRUE;
-			devc->trigger_voltage = g_variant_get_double(data);
-			break;
-		default:
-			return SR_ERR_NA;
-		}
-	} else {
-		switch (key) {
-		case SR_CONF_VDIV:
+	switch (key) {
+	case SR_CONF_LIMIT_SAMPLES:
+		return sr_sw_limits_config_set(&devc->limits, key, data);
+	case SR_CONF_SAMPLERATE:
+		devc->samplerate = g_variant_get_uint64(data);
+		break;
+	case SR_CONF_TRIGGER_SOURCE:
+		devc->trigger_enabled = TRUE;
+		name = g_variant_get_string(data,NULL);
+		if (assign_channel(name, &devc->trigger_channel, sdi->channels) != SR_OK)
+			return SR_ERR_ARG;
+		break;
+	case SR_CONF_TRIGGER_LEVEL:
+		devc->trigger_enabled = TRUE;
+		devc->trigger_voltage = g_variant_get_double(data);
+		break;
+	case SR_CONF_VDIV:
+		if (cg) {
 			if (g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
 				return SR_ERR_ARG;
 
 			if ((idx = std_u64_tuple_idx(data, ARRAY_AND_SIZE(vdivs))) < 0)
 				return SR_ERR_ARG;
 
-			((struct channel_group_priv *)(cg->priv))->range = idx;
-			select_range(cg, (uint8_t)idx);
+			((struct channel_group_priv *) (cg->priv))->range = idx;
+			select_range(cg, (uint8_t) idx);
 			break;
-		default:
-			return SR_ERR_NA;
+		} else {
+			return SR_ERR_ARG;
 		}
+	default:
+		return SR_ERR_NA;
 	}
 
 	return SR_OK;
