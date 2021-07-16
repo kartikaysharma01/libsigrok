@@ -46,6 +46,8 @@ static const uint32_t devopts[] = {
 static const uint32_t devopts_cg[] = {
 		SR_CONF_VDIV | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+		SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+		SR_CONF_TRIGGER_LEVEL | SR_CONF_GET | SR_CONF_SET,
 };
 
 static const struct analog_channel analog_channels[] = {
@@ -141,6 +143,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			cg = g_new0(struct sr_channel_group, 1);
 			cgp = g_new0(struct channel_group_priv, 1);
 			cp->chosa = analog_channels[i].chosa;
+			cp->gain = 1;
 			cp->min_input = analog_channels[i].minInput;
 			cp->max_input = analog_channels[i].maxInput;
 			cp->resolution = pow(2, 10) - 1;
@@ -184,7 +187,6 @@ static void select_range(const struct sr_channel_group *cg, uint8_t idx)
 static int config_get(uint32_t key, GVariant **data,
 					  const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	sr_err("LN 233 get -------------------- key == %d data", key);
 
 	struct dev_context *devc;
 	int idx;
