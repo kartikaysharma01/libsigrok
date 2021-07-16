@@ -45,6 +45,7 @@ static const uint32_t devopts[] = {
 
 static const uint32_t devopts_cg[] = {
 		SR_CONF_VDIV | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+		SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 };
 
 static const struct analog_channel analog_channels[] = {
@@ -142,7 +143,6 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			cp->chosa = analog_channels[i].chosa;
 			cp->min_input = analog_channels[i].minInput;
 			cp->max_input = analog_channels[i].maxInput;
-			cp->gain = 1;
 			cp->resolution = pow(2, 10) - 1;
 			if (!g_strcmp0(analog_channels[i].name, "CH1")) {
 				cp->programmable_gain_amplifier = 1;
@@ -207,14 +207,14 @@ static int config_get(uint32_t key, GVariant **data,
 		*data = g_variant_new_double(devc->trigger_voltage);
 		break;
 	case SR_CONF_VDIV:
-		if (cg) {
+		if (!cg) {
+			return  SR_ERR_CHANNEL_GROUP;
+		} else {
 			if (g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
 				return SR_ERR_ARG;
 			idx = ((struct channel_group_priv *) (cg->priv))->range;
 			*data = g_variant_new("(tt)", vdivs[idx][0], vdivs[idx][1]);
 			break;
-		} else {
-			return SR_ERR_ARG;
 		}
 	default:
 		return SR_ERR_NA;
@@ -232,7 +232,6 @@ static int config_set(uint32_t key, GVariant *data,
 
 	devc = sdi->priv;
 
-	sr_err("LN 233 SET -------------------- key == %d data", key);
 	switch (key) {
 	case SR_CONF_LIMIT_SAMPLES:
 		return sr_sw_limits_config_set(&devc->limits, key, data);
@@ -250,7 +249,9 @@ static int config_set(uint32_t key, GVariant *data,
 		devc->trigger_voltage = g_variant_get_double(data);
 		break;
 	case SR_CONF_VDIV:
-		if (cg) {
+		if (!cg) {
+			return SR_ERR_CHANNEL_GROUP;
+		} else {
 			if (g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
 				return SR_ERR_ARG;
 
@@ -260,8 +261,6 @@ static int config_set(uint32_t key, GVariant *data,
 			((struct channel_group_priv *) (cg->priv))->range = idx;
 			select_range(cg, (uint8_t) idx);
 			break;
-		} else {
-			return SR_ERR_ARG;
 		}
 	default:
 		return SR_ERR_NA;
@@ -273,57 +272,69 @@ static int config_set(uint32_t key, GVariant *data,
 static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	sr_err("LN 233 list -------------------- key == %d data", key);
 	struct dev_context *devc;
 	struct sr_channel *ch;
 	GSList *l;
 	GVariant **tmp;
 	int i;
 
-	devc = (sdi) ? sdi->priv : NULL;
-
-	if(!cg) {
-		switch (key) {
-		case SR_CONF_DEVICE_OPTIONS:
+	switch (key) {
 		case SR_CONF_SCAN_OPTIONS:
-			return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
-		case SR_CONF_SAMPLERATE:
-			*data = std_gvar_samplerates_steps(ARRAY_AND_SIZE(samplerates));
-			break;
-		case SR_CONF_TRIGGER_SOURCE:
-			if (!sdi)
-				return SR_ERR_ARG;
-
-			tmp = g_malloc(NUM_ANALOG_CHANNELS * sizeof(GVariant *));
-			for (l = sdi->channels, i=0; l; l = l->next, i++) {
-				ch = l->data;
-				tmp[i] = g_variant_new_string(ch->name);
-			}
-			*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp, i);
-			break;
-		case SR_CONF_LIMIT_SAMPLES:
-			*data = std_gvar_tuple_u64(MIN_SAMPLES, MAX_SAMPLES);
-			break;
-		default:
-			return SR_ERR_NA;
-		}
-	} else {
-		switch (key) {
 		case SR_CONF_DEVICE_OPTIONS:
-			*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
+			break;
+		case SR_CONF_SAMPLERATE:
+		case SR_CONF_LIMIT_SAMPLES:
+		case SR_CONF_TRIGGER_SOURCE:
+		case SR_CONF_TRIGGER_LEVEL:
+			if (!sdi || cg)
+				return SR_ERR_NA;
 			break;
 		case SR_CONF_VDIV:
-			if (g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
+			if (!sdi)
+				return SR_ERR_NA;
+			if (!cg)
+				return SR_ERR_CHANNEL_GROUP;
+			l = g_slist_find(sdi->channel_groups, cg);
+			if (!l)
 				return SR_ERR_ARG;
-
-			if (!devc)
-				return SR_ERR_ARG;
-
-			*data = std_gvar_tuple_array(ARRAY_AND_SIZE(vdivs));
 			break;
 		default:
 			return SR_ERR_NA;
+	}
+
+	switch (key) {
+	case SR_CONF_SCAN_OPTIONS:
+		return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, NO_OPTS, NO_OPTS);
+	case SR_CONF_DEVICE_OPTIONS:
+		if (!cg)
+			return STD_CONFIG_LIST(key, data, sdi, cg, NO_OPTS, drvopts, devopts);
+		*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
+		break;
+	case SR_CONF_SAMPLERATE:
+		*data = std_gvar_samplerates_steps(ARRAY_AND_SIZE(samplerates));
+		break;
+	case SR_CONF_TRIGGER_SOURCE:
+		if (!sdi)
+			return SR_ERR_ARG;
+
+		tmp = g_malloc(NUM_ANALOG_CHANNELS * sizeof(GVariant *));
+		for (l = sdi->channels, i=0; l; l = l->next, i++) {
+			ch = l->data;
+			tmp[i] = g_variant_new_string(ch->name);
 		}
+		*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp, i);
+		break;
+	case SR_CONF_LIMIT_SAMPLES:
+		*data = std_gvar_tuple_u64(MIN_SAMPLES, MAX_SAMPLES);
+		break;
+	case SR_CONF_VDIV:
+		if (g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
+			return SR_ERR_ARG;
+
+		*data = std_gvar_tuple_array(ARRAY_AND_SIZE(vdivs));
+		break;
+	default:
+		return SR_ERR_NA;
 	}
 
 	return SR_OK;
