@@ -48,7 +48,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	serial = sdi->conn;
 	ch = devc->channel_entry->data;
 
-	if(pslab_fetch_data(sdi) != SR_OK)
+	if (pslab_fetch_data(sdi) != SR_OK)
 		return TRUE;
 
 	devc->short_int_buffer = g_malloc(2);
@@ -56,7 +56,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	samples_collected = 0;
 
 	for (i = 0; i < (int)devc->limits.limit_samples; i++) {
-		if (serial_read_blocking(serial, devc->short_int_buffer, 2 ,
+		if (serial_read_blocking(serial, devc->short_int_buffer, 2,
 					 serial_timeout(serial, 2)) < 2) {
 			sr_dbg("Failed to read buffer properly, samples read = %d", samples_collected);
 			break;
@@ -86,7 +86,7 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 		/* We got the samples for this channel, now get the next channel. */
 		devc->channel_entry = devc->channel_entry->next;
 	} else {
-		/* Samples collected from al channels. */
+		/* Samples collected from all channels. */
 		devc->channel_entry = NULL;
 		devc->enabled_channels = NULL;
 		g_slist_free(devc->channel_entry);
@@ -100,11 +100,12 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 
 SR_PRIV void pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t cmd[], int count)
 {
-	for (int i = 0; i < count; i++) {
-		int bytes_written = serial_write_blocking(serial, &cmd[i], 1,
+	int i, bytes_written;
+	for (i = 0; i < count; i++) {
+		bytes_written = serial_write_blocking(serial, &cmd[i], 1,
 							  serial_timeout(serial, 1));
 
-		if(bytes_written < 1)
+		if (bytes_written < 1)
 			sr_dbg("Failed to write command %d to device.", cmd[i]);
 	}
 
@@ -112,10 +113,11 @@ SR_PRIV void pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t cmd[], in
 
 SR_PRIV void pslab_write_u16(struct sr_serial_dev_inst* serial, uint16_t val[], int count)
 {
-	for (int i = 0; i < count; i++) {
-		int bytes_written = serial_write_blocking(serial, &val[i], 2,
+	int i, bytes_written;
+	for (i = 0; i < count; i++) {
+		bytes_written = serial_write_blocking(serial, &val[i], 2,
 							  serial_timeout(serial, 2));
-		if(bytes_written < 2)
+		if (bytes_written < 2)
 			sr_dbg("Failed to write command %d to device.", val[i]);
 	}
 }
@@ -138,6 +140,8 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 
 	struct dev_context *devc;
 	struct sr_serial_dev_inst *serial;
+	struct sr_channel *ch;
+	struct channel_priv *cp;
 	int i, chosa;
 	struct channel_priv *cp_map;
 	char *ch234[3] = {"CH2", "CH3", "MIC"};
@@ -167,9 +171,9 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 			pslab_write_u8(serial, cmd, 2);
 		}
 	} else if (g_slist_length(devc->enabled_channels) == 2) {
-		struct sr_channel* ch = g_malloc0(sizeof(struct sr_channel));
+		ch = g_malloc0(sizeof(struct sr_channel));
 		if (assign_channel(ch234[0], ch, devc->enabled_channels) == SR_OK) {
-			struct channel_priv *cp = ch->priv;
+			cp = ch->priv;
 			pslab_set_resolution(ch, 10);
 			cp->buffer_idx = (int) devc->limits.limit_samples;
 		}
@@ -177,10 +181,10 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 		pslab_write_u8(serial, cmd, 2);
 	} else {
 		for (i = 0; i < 3; i++) {
-			struct sr_channel* ch = g_malloc0(sizeof (struct sr_channel));
+			ch = g_malloc0(sizeof (struct sr_channel));
 			if (assign_channel(ch234[i], ch, devc->enabled_channels) != SR_OK)
 				break;
-			struct channel_priv *cp = ch->priv;
+			cp = ch->priv;
 			pslab_set_resolution(ch, 10);
 			cp->buffer_idx = (i + 1) * (int)devc->limits.limit_samples;
 		}
@@ -196,7 +200,7 @@ SR_PRIV void pslab_caputure_oscilloscope(const struct sr_dev_inst *sdi)
 
 	g_usleep(8000000 * devc->limits.limit_samples / devc->samplerate);
 
-	while(!pslab_progress(sdi))
+	while (!pslab_progress(sdi))
 		continue;
 
 }
@@ -218,7 +222,7 @@ SR_PRIV int pslab_fetch_data(const struct sr_dev_inst *sdi)
 	uint8_t cmd[] = {COMMON, RETRIEVE_BUFFER};
 	pslab_write_u8(serial, cmd, 2);
 
-	uint16_t val[] = {((struct channel_priv *)(ch->priv))->buffer_idx ,
+	uint16_t val[] = {((struct channel_priv *)(ch->priv))->buffer_idx,
 		devc->limits.limit_samples};
 	pslab_write_u16(serial, val, 2);
 
@@ -265,7 +269,7 @@ SR_PRIV int pslab_set_gain(const struct sr_dev_inst *sdi,
 	struct channel_priv *cp;
 	int gain_idx;
 
-	if(g_strcmp0(ch->name,"CH1") && g_strcmp0(ch->name,"CH2")) {
+	if (g_strcmp0(ch->name,"CH1") && g_strcmp0(ch->name,"CH2")) {
 		sr_info("Analog gain is not available on %s", ch->name);
 		return SR_ERR_ARG;
 	}
@@ -343,7 +347,7 @@ SR_PRIV int pslab_unscale(const struct sr_channel *ch, double voltage)
 	level = (int)((voltage - intercept) / slope);
 	if (level < 0)
 		level = 0;
-	else if (level > cp->resolution )
+	else if (level > cp->resolution)
 		level = (int)cp->resolution;
 
 	sr_dbg("Unscaled Voltage = %d", level);
@@ -353,12 +357,13 @@ SR_PRIV int pslab_unscale(const struct sr_channel *ch, double voltage)
 SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi)
 {
 	struct sr_serial_dev_inst *serial;
+	int *buf;
 
 	serial = sdi->conn;
-	int *buf = g_malloc0(1);
+	buf = g_malloc0(1);
 	serial_read_blocking(serial,buf,1, serial_timeout(serial,1));
 
-	if(!(*buf & 0x01) || !(*buf)) {
+	if (!(*buf & 0x01) || !(*buf)) {
 		sr_dbg("Did not receive ACK or Received non ACK byte while waiting for ACK.");
 		g_free(buf);
 		return SR_ERR_IO;
@@ -375,9 +380,9 @@ SR_PRIV int assign_channel(const char* channel_name,
 	GSList *l;
 	struct sr_channel *ch;
 
-	for(l = list; l ; l = l->next) {
+	for (l = list; l; l = l->next) {
 		ch = l->data;
-		if(!g_strcmp0(ch->name, channel_name)) {
+		if (!g_strcmp0(ch->name, channel_name)) {
 			*target = *ch;
 			return SR_OK;
 		}

@@ -192,7 +192,7 @@ static int config_get(uint32_t key, GVariant **data,
 
 	devc = sdi->priv;
 
-	if(!cg) {
+	if (!cg) {
 		switch (key) {
 		case SR_CONF_LIMIT_SAMPLES:
 			return sr_sw_limits_config_get(&devc->limits, key, data);
@@ -211,7 +211,7 @@ static int config_get(uint32_t key, GVariant **data,
 	} else {
 		switch (key) {
 		case SR_CONF_VDIV:
-			if ( g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
+			if (g_strcmp0(cg->name, "CH1") && g_strcmp0(cg->name, "CH2"))
 				return SR_ERR_ARG;
 			idx = ((struct channel_group_priv *)(cg->priv))->range;
 			*data = g_variant_new("(tt)", vdivs[idx][0], vdivs[idx][1]);
@@ -283,7 +283,7 @@ static int config_list(uint32_t key, GVariant **data,
 
 	devc = (sdi) ? sdi->priv : NULL;
 
-	if(!cg) {
+	if (!cg) {
 		switch (key) {
 		case SR_CONF_DEVICE_OPTIONS:
 		case SR_CONF_SCAN_OPTIONS:
@@ -343,7 +343,7 @@ static int configure_channels(const struct sr_dev_inst *sdi)
 
 	for (l = sdi->channels; l; l = l->next) {
 		ch = l->data;
-		if(ch->enabled) {
+		if (ch->enabled) {
 			devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);
 			sr_info("enabled channels: {} %s", ch->name);
 		}
@@ -367,7 +367,7 @@ static uint64_t lookup_maximum_samplerate(guint channels, gboolean trigger)
 	return min_samplerates[channels_idx[channels-1][1]][trigger];
 }
 
-static int check_args(guint channels,uint64_t samples ,uint64_t samplerate,
+static int check_args(guint channels,uint64_t samples, uint64_t samplerate,
 		      gboolean trigger)
 {
 	if (channels > 4) {
@@ -392,7 +392,7 @@ static int check_args(guint channels,uint64_t samples ,uint64_t samplerate,
 static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 {
 	GSList *l;
-	struct dev_context *devc ;
+	struct dev_context *devc;
 	struct sr_channel *ch;
 
 	devc = sdi->priv;
@@ -411,7 +411,6 @@ static void configure_oscilloscope(const struct sr_dev_inst *sdi)
 
 }
 
-
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 {
 	int ret;
@@ -429,7 +428,7 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	case SR_CONF_OSCILLOSCOPE:
 		ret = check_args(g_slist_length(devc->enabled_channels),
 				 devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled);
-		if(ret !=SR_OK)
+		if (ret !=SR_OK)
 			return ret;
 
 		configure_oscilloscope(sdi);
