@@ -1,7 +1,7 @@
 /*
  * This file is part of the libsigrok project.
  *
- * Copyright (C) 2021 Karikay Sharma <sharma.kartik2107@gmail.com>
+ * Copyright (C) 2021 Kartikay Sharma <sharma.kartik2107@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -449,8 +449,8 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 }
 
 static struct sr_dev_driver pslab_driver_info = {
-	.name = "pslab",
-	.longname = "PSLab",
+	.name = "pslab-oscilloscope",
+	.longname = "PSLab Oscilloscope",
 	.api_version = 1,
 	.init = std_init,
 	.cleanup = std_cleanup,

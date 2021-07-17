@@ -1,7 +1,7 @@
 /*
  * This file is part of the libsigrok project.
  *
- * Copyright (C) 2021 Karikay Sharma <sharma.kartik2107@gmail.com>
+ * Copyright (C) 2021 Kartikay Sharma <sharma.kartik2107@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,21 +17,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBSIGROK_HARDWARE_PSLAB_PROTOCOL_H
-#define LIBSIGROK_HARDWARE_PSLAB_PROTOCOL_H
+#ifndef LIBSIGROK_HARDWARE_PSLAB_OSCILLOSCOPE_PROTOCOL_H
+#define LIBSIGROK_HARDWARE_PSLAB_OSCILLOSCOPE_PROTOCOL_H
 
 #include <stdint.h>
 #include <glib.h>
 #include <libsigrok/libsigrok.h>
 #include "libsigrok-internal.h"
 
-#define LOG_PREFIX "pslab"
+#define LOG_PREFIX "pslab-oscilloscope"
 #define NUM_ANALOG_CHANNELS 4
-
 #define MAX_SAMPLES 10000
-#define COMMON 0x0b
 #define MIN_SAMPLES 10
 
+#define COMMON 0x0b
 #define ADC 0x02
 #define VERSION_COMMAND 0x05
 #define CAPTURE_ONE 0x01
@@ -40,16 +39,7 @@
 #define CAPTURE_FOUR 0x04
 #define CONFIGURE_TRIGGER 0x05
 #define GET_CAPTURE_STATUS 0x06
-#define GET_CAPTURE_CHANNEL 0x07
 #define SET_PGA_GAIN 0x08
-#define GET_VOLTAGE 0x09
-#define GET_VOLTAGE_SUMMED 0x0a
-#define START_ADC_STREAMING 0x0b
-#define SELECT_PGA_CHANNEL 0x0c
-#define CAPTURE_12BIT 0x0d
-#define CAPTURE_MULTIPLE 0x0e
-#define SET_HI_CAPTURE 0x0f
-#define SET_LO_CAPTURE 0x10
 #define RETRIEVE_BUFFER 0x08
 
 static const uint64_t GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
