@@ -45,9 +45,6 @@
 static const uint64_t GAIN_VALUES[] = {1, 2, 4, 5, 8, 10, 16, 32};
 
 struct dev_context {
-	/* device mode */
-	int mode;
-
 	/* trigger */
 	gboolean trigger_enabled;
 	struct sr_channel trigger_channel;

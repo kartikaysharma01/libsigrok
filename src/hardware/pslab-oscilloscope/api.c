@@ -159,7 +159,6 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 			sdi->channel_groups = g_slist_append(sdi->channel_groups, cg);
 		}
 		sr_sw_limits_init(&devc->limits);
-		devc->mode = SR_CONF_OSCILLOSCOPE;
 		devc->samplerate = 200000;
 		devc->limits.limit_samples = 2000;
 		devc->trigger_enabled = FALSE;
@@ -424,19 +423,13 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	if (!devc->enabled_channels)
 		return SR_ERR;
 
-	switch(devc->mode) {
-	case SR_CONF_OSCILLOSCOPE:
-		ret = check_args(g_slist_length(devc->enabled_channels),
-				 devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled);
-		if (ret !=SR_OK)
-			return ret;
+	ret = check_args(g_slist_length(devc->enabled_channels),
+			 devc->limits.limit_samples, devc->samplerate, devc->trigger_enabled);
+	if (ret !=SR_OK)
+		return ret;
 
-		configure_oscilloscope(sdi);
-		pslab_caputure_oscilloscope(sdi);
-		break;
-	default:
-		break;
-	}
+	configure_oscilloscope(sdi);
+	pslab_caputure_oscilloscope(sdi);
 
 	devc->channel_entry = devc->enabled_channels;
 	std_session_send_df_header(sdi);
