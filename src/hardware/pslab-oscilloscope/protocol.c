@@ -81,6 +81,8 @@ SR_PRIV int pslab_receive_data(int fd, int revents, void *cb_data)
 	packet.payload = &analog;
 	sr_session_send(sdi, &packet);
 	g_slist_free(analog.meaning->channels);
+	g_free(devc->short_int_buffer);
+	g_free(devc->data);
 
 	if (devc->channel_entry->next) {
 		/* We got the samples for this channel, now get the next channel. */
@@ -258,6 +260,8 @@ SR_PRIV gboolean pslab_progress(const struct sr_dev_inst *sdi)
 	if (pslab_get_ack(sdi) != SR_OK)
 		sr_dbg("Failed in knowing capturing status");
 
+	g_free(buf);
+	g_free(buf2);
 	return capturing_complete;
 }
 

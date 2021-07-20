@@ -131,7 +131,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->vendor = g_strdup("FOSSASIA");
 		sdi->connection_id = device_path;
 		sdi->conn = serial;
-		sdi->version = version;
+		sdi->version = g_strdup(version);
 
 		for (i = 0; i < NUM_ANALOG_CHANNELS; i++) {
 			ch = sr_channel_new(sdi, analog_channels[i].index,SR_CHANNEL_ANALOG,
@@ -167,6 +167,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->priv = devc;
 
 		devices = g_slist_append(devices, sdi);
+		g_free(version);
 		serial_close(serial);
 	}
 	return std_scan_complete(di, devices);
@@ -299,7 +300,7 @@ static int config_list(uint32_t key, GVariant **data,
 				ch = l->data;
 				tmp[i] = g_variant_new_string(ch->name);
 			}
-			*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp, i);
+			*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp, NUM_ANALOG_CHANNELS);
 			break;
 		case SR_CONF_LIMIT_SAMPLES:
 			*data = std_gvar_tuple_u64(MIN_SAMPLES, MAX_SAMPLES);
