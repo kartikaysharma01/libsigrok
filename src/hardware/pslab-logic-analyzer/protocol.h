@@ -1,7 +1,7 @@
 /*
  * This file is part of the libsigrok project.
  *
- * Copyright (C) 2021 Bhaskar Sharma <bhaskar.sharma@groww.in>
+ * Copyright (C) 2021 Kartikay Sharma <sharma.kartik2107@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,32 @@
 
 #define LOG_PREFIX "pslab-logic-analyzer"
 
+#define NUM_DIGITAL_OUTPUT_CHANNEL 4
+#define COMMON 0x0b
+#define ADC 0x02
+#define VERSION_COMMAND 0x05
+
+static const uint64_t PRESCALERS[] = {1, 8, 64, 256};
+
 struct dev_context {
+    /* PWM generator */
+    double frequency;
+    GSList * enabled_digital_output;
+    gboolean pwm;
+    int wavelength;
+    int prescaler;
+};
+
+struct digital_output_channel {
+    const char *name;
+    uint8_t state_mask;
+};
+
+struct channel_group_priv {
+    double duty_cycle;
+    double phase;
+    char *state;
+    uint8_t state_mask;
 };
 
 SR_PRIV int pslab_logic_analyzer_receive_data(int fd, int revents, void *cb_data);

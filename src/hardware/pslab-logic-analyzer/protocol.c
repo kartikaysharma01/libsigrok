@@ -1,7 +1,7 @@
 /*
  * This file is part of the libsigrok project.
  *
- * Copyright (C) 2021 Bhaskar Sharma <bhaskar.sharma@groww.in>
+ * Copyright (C) 2021 Kartikay Sharma <sharma.kartik2107@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
