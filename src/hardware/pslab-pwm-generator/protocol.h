@@ -27,7 +27,52 @@
 
 #define LOG_PREFIX "pslab-pwm-generator"
 
+#define NUM_DIGITAL_OUTPUT_CHANNEL 4
+#define COMMON 0x0b
+#define ADC 0x02
+#define VERSION_COMMAND 0x05
+
+/*--------WAVEGEN-----*/
+#define WAVEGEN 0x07
+#define SET_WG 0x01
+#define SET_SQR1 0x03
+#define SET_SQR2 0x04
+#define SET_SQRS 0x05
+#define TUNE_SINE_OSCILLATOR 0x06
+#define SQR4 0x07
+#define MAP_REFERENCE 0x08
+#define SET_BOTH_WG 0x09
+#define SET_WAVEFORM_TYPE 0x0a
+#define SELECT_FREQ_REGISTER 0x0b
+#define DELAY_GENERATOR 0x0c
+#define SET_SINE1 0x0d
+#define SET_SINE2 0x0e
+
+/*-----digital outputs----*/
+#define DOUT 0x08
+#define SET_STATE 0x01
+
+static const uint64_t PRESCALERS[] = {1, 8, 64, 256};
+
 struct dev_context {
+    /* PWM generator */
+    double frequency;
+    GSList * enabled_digital_output;
+    gboolean pwm;
+    int wavelength;
+    int prescaler;
+};
+
+struct digital_output_channel {
+    const char *name;
+    uint8_t state_mask;
+};
+
+struct channel_group_priv {
+    double duty_cycle;
+    double phase;
+    char *state;
+    uint8_t state_mask;
 };
 
 SR_PRIV int pslab_pwm_generator_receive_data(int fd, int revents, void *cb_data);
