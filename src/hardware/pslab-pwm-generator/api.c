@@ -30,7 +30,7 @@ static const uint32_t drvopts[] = {
 };
 
 static const uint32_t devopts[] = {
-	SR_CONF_CONTINUOUS | SR_CONF_SET,
+	SR_CONF_CONTINUOUS,
 	SR_CONF_OUTPUT_FREQUENCY | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 };
 
@@ -142,96 +142,176 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	return std_scan_complete(di, devices);
 }
 
-static int dev_open(struct sr_dev_inst *sdi)
-{
-	(void)sdi;
-
-	/* TODO: get handle from sdi->conn and open it. */
-
-	return SR_OK;
-}
-
-static int dev_close(struct sr_dev_inst *sdi)
-{
-	(void)sdi;
-
-	/* TODO: get handle from sdi->conn and close it. */
-
-	return SR_OK;
-}
-
 static int config_get(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	int ret;
+	struct dev_context *devc;
+	struct channel_group_priv *cp;
 
-	(void)sdi;
-	(void)data;
-	(void)cg;
+	if (!sdi)
+		return SR_ERR_ARG;
 
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		return SR_ERR_NA;
+	devc = sdi->priv;
+
+	if(!cg) {
+		switch (key) {
+		case SR_CONF_OUTPUT_FREQUENCY:
+			*data = g_variant_new_double(devc->frequency);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
+	} else {
+		switch (key) {
+		case SR_CONF_DUTY_CYCLE:
+			cp = cg->priv;
+			*data = g_variant_new_double(cp->duty_cycle * 100);
+			break;
+		case SR_CONF_PHASE:
+			cp = cg->priv;
+			*data = g_variant_new_double(cp->phase * 360);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
 	}
 
-	return ret;
+	return SR_OK;
 }
 
 static int config_set(uint32_t key, GVariant *data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	int ret;
+	struct dev_context *devc;
+	struct channel_group_priv *cp;
+	double tmp;
 
-	(void)sdi;
-	(void)data;
-	(void)cg;
+	if (!sdi)
+		return SR_ERR_ARG;
 
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		ret = SR_ERR_NA;
+	devc = sdi->priv;
+
+	if (!cg) {
+		switch (key) {
+		case SR_CONF_OUTPUT_FREQUENCY:
+			devc->frequency = g_variant_get_double(data);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
+	} else {
+		switch (key) {
+		case SR_CONF_DUTY_CYCLE:
+			cp = cg->priv;
+			tmp = g_variant_get_double(data);
+			tmp = tmp / 100;
+			cp->duty_cycle = tmp;
+
+			// set state
+			if (cp->duty_cycle == 0) {
+				cp->state = g_strdup("LOW");
+			} else if (cp->duty_cycle < 1) {
+				cp->state = g_strdup("PWM");
+			} else if (cp->duty_cycle == 1) {
+				cp->state = g_strdup("HIGH");
+			} else {
+				sr_err("Duty Cycle can not be greater than 100");
+				return SR_ERR_ARG;
+			}
+			break;
+		case SR_CONF_PHASE:
+			cp = cg->priv;
+			tmp = g_variant_get_double(data);
+			tmp = tmp / 360;
+			cp->phase = tmp;
+			break;
+		default:
+			return SR_ERR_NA;
+		}
 	}
-
-	return ret;
-}
-
-static int config_list(uint32_t key, GVariant **data,
-	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
-{
-	int ret;
-
-	(void)sdi;
-	(void)data;
-	(void)cg;
-
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		return SR_ERR_NA;
-	}
-
-	return ret;
-}
-
-static int dev_acquisition_start(const struct sr_dev_inst *sdi)
-{
-	/* TODO: configure hardware, reset acquisition state, set up
-	 * callbacks and send header packet. */
-
-	(void)sdi;
 
 	return SR_OK;
 }
 
-static int dev_acquisition_stop(struct sr_dev_inst *sdi)
-{
-	/* TODO: stop acquisition. */
+static int config_list(uint32_t key, GVariant **data,
+	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg) {
+	if (!cg) {
+		switch (key) {
+		case SR_CONF_DEVICE_OPTIONS:
+		case SR_CONF_SCAN_OPTIONS:
+			return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
+		case SR_CONF_OUTPUT_FREQUENCY:
+			*data = std_gvar_min_max_step_array(output_freq_min_max_step);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
+	} else {
+		switch (key) {
+		case SR_CONF_DEVICE_OPTIONS:
+			*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
+			break;
+		case SR_CONF_PHASE:
+			*data = std_gvar_min_max_step_array(phase_min_max_step);
+			break;
+		case SR_CONF_DUTY_CYCLE:
+			*data = std_gvar_min_max_step_array(duty_cycle_min_max_step);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
+	}
 
-	(void)sdi;
+	return SR_OK;
+}
+
+static void configure_channels(const struct sr_dev_inst *sdi)
+{
+	struct dev_context *devc;
+	const GSList *l;
+	struct sr_channel *ch;
+
+	devc = sdi->priv;
+
+	g_slist_free(devc->enabled_digital_output);
+	devc->enabled_digital_output = NULL;
+
+	for (l = sdi->channels; l; l = l->next) {
+		ch = l->data;
+		if (ch->enabled) {
+			devc->enabled_digital_output =
+				g_slist_append(devc->enabled_digital_output, ch);
+			sr_info("enabled channels: {} %s", ch->name);
+		}
+	}
+}
+
+static int dev_acquisition_start(const struct sr_dev_inst *sdi)
+{
+	struct dev_context *devc;
+	struct sr_serial_dev_inst *serial;
+
+	if (!sdi)
+		return SR_ERR_ARG;
+
+	devc = sdi->priv;
+	serial = sdi->conn;
+
+	configure_channels(sdi);
+	if (!devc->enabled_digital_output) {
+		sr_err("No channels enabled");
+		return SR_ERR_ARG;
+	}
+
+	if (devc->frequency > HIGH_FREQUENCY_LIMIT || devc->frequency <= 0) {
+		sr_err("Frequency should be greater than 0 and less than 10 MHz");
+		return SR_ERR_ARG;
+	}
+
+	std_session_send_df_header(sdi);
+
+	serial_source_add(sdi->session, serial, G_IO_IN, 10,
+			  pslab_pwm_generator_receive_data, (void *)sdi);
 
 	return SR_OK;
 }
@@ -248,10 +328,10 @@ static struct sr_dev_driver pslab_pwm_generator_driver_info = {
 	.config_get = config_get,
 	.config_set = config_set,
 	.config_list = config_list,
-	.dev_open = dev_open,
-	.dev_close = dev_close,
+	.dev_open = std_serial_dev_open,
+	.dev_close = std_serial_dev_close,
 	.dev_acquisition_start = dev_acquisition_start,
-	.dev_acquisition_stop = dev_acquisition_stop,
+	.dev_acquisition_stop = std_serial_dev_acquisition_stop,
 	.context = NULL,
 };
 SR_REGISTER_DEV_DRIVER(pslab_pwm_generator_driver_info);
