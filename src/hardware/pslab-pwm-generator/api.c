@@ -30,7 +30,7 @@ static const uint32_t drvopts[] = {
 };
 
 static const uint32_t devopts[] = {
-	SR_CONF_CONTINUOUS | SR_CONF_SET,
+	SR_CONF_CONTINUOUS,
 	SR_CONF_OUTPUT_FREQUENCY | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 };
 
@@ -142,79 +142,121 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	return std_scan_complete(di, devices);
 }
 
-static int dev_open(struct sr_dev_inst *sdi)
-{
-	(void)sdi;
-
-	/* TODO: get handle from sdi->conn and open it. */
-
-	return SR_OK;
-}
-
-static int dev_close(struct sr_dev_inst *sdi)
-{
-	(void)sdi;
-
-	/* TODO: get handle from sdi->conn and close it. */
-
-	return SR_OK;
-}
-
 static int config_get(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	int ret;
+	struct dev_context *devc;
+	struct channel_group_priv *cp;
 
-	(void)sdi;
-	(void)data;
-	(void)cg;
+	if (!sdi)
+		return SR_ERR_ARG;
 
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		return SR_ERR_NA;
+	devc = sdi->priv;
+
+	if(!cg) {
+		switch (key) {
+		case SR_CONF_OUTPUT_FREQUENCY:
+			sr_err("config_get: get freq ln 241, %f", devc->frequency);
+			*data = g_variant_new_double(devc->frequency);
+		default:
+			return SR_ERR_NA;
+		}
+	} else {
+		switch (key) {
+		case SR_CONF_DUTY_CYCLE:
+			cp = cg->priv;
+			*data = g_variant_new_double(cp->duty_cycle * 100);
+			sr_err("config_get: get duty cycle ln 261, = %f", cp->duty_cycle);
+			break;
+		case SR_CONF_PHASE:
+			cp = cg->priv;
+			*data = g_variant_new_double(cp->phase * 360);
+			sr_err("config_get: get phase ln 261, = %f", cp->phase);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
 	}
 
-	return ret;
+	return SR_OK;
 }
 
 static int config_set(uint32_t key, GVariant *data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	int ret;
+	struct dev_context *devc;
+	struct channel_group_priv *cp;
+	double tmp;
 
-	(void)sdi;
-	(void)data;
-	(void)cg;
+	if (!sdi)
+		return SR_ERR_ARG;
 
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		ret = SR_ERR_NA;
+	devc = sdi->priv;
+
+	if (!cg) {
+		switch (key) {
+		case SR_CONF_OUTPUT_FREQUENCY:
+			devc->frequency = g_variant_get_double(data);
+			sr_err("config_set: set frequency ln 337, = %f", devc->frequency);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
+	} else {
+		switch (key) {
+		case SR_CONF_DUTY_CYCLE:
+			cp = cg->priv;
+			tmp = g_variant_get_double(data);
+			tmp = tmp / 100;
+			cp->duty_cycle = tmp;
+			sr_err("config_set: set duty cycle ln 337, = %f", cp->duty_cycle);
+			break;
+		case SR_CONF_PHASE:
+			cp = cg->priv;
+			tmp = g_variant_get_double(data);
+			tmp = tmp / 360;
+			cp->phase = tmp;
+			sr_err("GOAT: set phase ln 347, = %f", cp->phase);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
 	}
 
-	return ret;
+	return SR_OK;
 }
 
 static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	int ret;
-
-	(void)sdi;
-	(void)data;
-	(void)cg;
-
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		return SR_ERR_NA;
+	if(!cg) {
+		switch (key) {
+		case SR_CONF_DEVICE_OPTIONS:
+		case SR_CONF_SCAN_OPTIONS:
+			return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
+		case SR_CONF_OUTPUT_FREQUENCY:
+			*data = std_gvar_min_max_step_array(output_freq_min_max_step);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
+	} else {
+		switch (key) {
+		case SR_CONF_DEVICE_OPTIONS:
+			*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
+			break;
+		case SR_CONF_PHASE:
+			*data = std_gvar_min_max_step_array(phase_min_max_step);
+			break;
+		case SR_CONF_DUTY_CYCLE:
+			*data = std_gvar_min_max_step_array(duty_cycle_min_max_step);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
 	}
 
-	return ret;
+	return SR_OK;
 }
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
@@ -248,8 +290,8 @@ static struct sr_dev_driver pslab_pwm_generator_driver_info = {
 	.config_get = config_get,
 	.config_set = config_set,
 	.config_list = config_list,
-	.dev_open = dev_open,
-	.dev_close = dev_close,
+	.dev_open = std_serial_dev_open,
+	.dev_close = std_serial_dev_close,
 	.dev_acquisition_start = dev_acquisition_start,
 	.dev_acquisition_stop = dev_acquisition_stop,
 	.context = NULL,

@@ -39,3 +39,40 @@ SR_PRIV int pslab_pwm_generator_receive_data(int fd, int revents, void *cb_data)
 
 	return TRUE;
 }
+
+SR_PRIV void pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t cmd[], int count)
+{
+	int i, bytes_written;
+	for (i = 0; i < count; i++) {
+		bytes_written = serial_write_blocking(serial, &cmd[i], 1,
+						      serial_timeout(serial, 1));
+
+		if (bytes_written < 1)
+			sr_dbg("Failed to write command %d to device.", cmd[i]);
+	}
+
+}
+
+SR_PRIV void pslab_write_u16(struct sr_serial_dev_inst* serial, uint16_t val[], int count)
+{
+	int i, bytes_written;
+	for (i = 0; i < count; i++) {
+		bytes_written = serial_write_blocking(serial, &val[i], 2,
+						      serial_timeout(serial, 2));
+		if (bytes_written < 2)
+			sr_dbg("Failed to write command %d to device.", val[i]);
+	}
+}
+
+SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial)
+{
+	sr_info("Sending version commands to device");
+
+	uint8_t cmd[] = {COMMON, VERSION_COMMAND};
+	char *buffer = g_malloc0(16);
+	int len = 15;
+	pslab_write_u8(serial, cmd, 2);
+	serial_readline(serial, &buffer, &len, serial_timeout(serial, sizeof(buffer)));
+	return buffer;
+}
+
