@@ -210,6 +210,14 @@ static int config_set(uint32_t key, GVariant *data,
 			tmp = tmp / 100;
 			cp->duty_cycle = tmp;
 			sr_err("config_set: set duty cycle ln 337, = %f", cp->duty_cycle);
+
+			// set state
+			if (cp->duty_cycle == 0)
+				cp->state = g_strdup("LOW");
+			else if (cp->duty_cycle < 1)
+				cp->state = g_strdup("PWM");
+			else
+				cp->state = g_strdup("HIGH");
 			break;
 		case SR_CONF_PHASE:
 			cp = cg->priv;
@@ -227,44 +235,84 @@ static int config_set(uint32_t key, GVariant *data,
 }
 
 static int config_list(uint32_t key, GVariant **data,
-	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
-{
-	if(!cg) {
+	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg) {
+	if (!cg) {
 		switch (key) {
-		case SR_CONF_DEVICE_OPTIONS:
-		case SR_CONF_SCAN_OPTIONS:
-			return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
-		case SR_CONF_OUTPUT_FREQUENCY:
-			*data = std_gvar_min_max_step_array(output_freq_min_max_step);
-			break;
-		default:
-			return SR_ERR_NA;
+			case SR_CONF_DEVICE_OPTIONS:
+			case SR_CONF_SCAN_OPTIONS:
+				return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
+			case SR_CONF_OUTPUT_FREQUENCY:
+				*data = std_gvar_min_max_step_array(output_freq_min_max_step);
+				break;
+			default:
+				return SR_ERR_NA;
 		}
 	} else {
 		switch (key) {
-		case SR_CONF_DEVICE_OPTIONS:
-			*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
-			break;
-		case SR_CONF_PHASE:
-			*data = std_gvar_min_max_step_array(phase_min_max_step);
-			break;
-		case SR_CONF_DUTY_CYCLE:
-			*data = std_gvar_min_max_step_array(duty_cycle_min_max_step);
-			break;
-		default:
-			return SR_ERR_NA;
+			case SR_CONF_DEVICE_OPTIONS:
+				*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
+				break;
+			case SR_CONF_PHASE:
+				*data = std_gvar_min_max_step_array(phase_min_max_step);
+				break;
+			case SR_CONF_DUTY_CYCLE:
+				*data = std_gvar_min_max_step_array(duty_cycle_min_max_step);
+				break;
+			default:
+				return SR_ERR_NA;
 		}
 	}
 
 	return SR_OK;
 }
 
+static int configure_channels(const struct sr_dev_inst *sdi)
+{
+	struct dev_context *devc;
+	const GSList *l;
+	struct sr_channel *ch;
+
+	devc = sdi->priv;
+
+	g_slist_free(devc->enabled_digital_output);
+	devc->enabled_digital_output = NULL;
+
+	for (l = sdi->channels; l; l = l->next) {
+		ch = l->data;
+		if (ch->enabled) {
+			devc->enabled_digital_output = g_slist_append(devc->enabled_digital_output, ch);
+			sr_info("enabled channels: {} %s", ch->name);
+		}
+	}
+	return SR_OK;
+}
+
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 {
-	/* TODO: configure hardware, reset acquisition state, set up
-	 * callbacks and send header packet. */
+	struct dev_context *devc;
+	struct sr_serial_dev_inst *serial;
 
-	(void)sdi;
+	if (!sdi)
+		return SR_ERR_ARG;
+
+	devc = sdi->priv;
+	serial = sdi->conn;
+
+	configure_channels(sdi);
+	if (!devc->enabled_digital_output) {
+		sr_err("No channels enabled");
+		return SR_ERR_ARG;
+	}
+
+	if (devc->frequency > HIGH_FREQUENCY_LIMIT || devc->frequency < 0) {
+		sr_err("Frequency should be greater than 0 and less than 10 MHz");
+		return SR_ERR_ARG;
+	}
+
+	std_session_send_df_header(sdi);
+
+	serial_source_add(sdi->session, serial, G_IO_IN, 10,
+			  pslab_pwm_generator_receive_data, (void *)sdi);
 
 	return SR_OK;
 }

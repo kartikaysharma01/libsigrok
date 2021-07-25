@@ -28,6 +28,8 @@
 #define LOG_PREFIX "pslab-pwm-generator"
 
 #define NUM_DIGITAL_OUTPUT_CHANNEL 4
+#define HIGH_FREQUENCY_LIMIT 10e7
+#define CLOCK_RATE 64e6
 #define COMMON 0x0b
 #define ADC 0x02
 #define VERSION_COMMAND 0x05
@@ -79,5 +81,9 @@ SR_PRIV int pslab_pwm_generator_receive_data(int fd, int revents, void *cb_data)
 SR_PRIV void pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t cmd[], int count);
 SR_PRIV void pslab_write_u16(struct sr_serial_dev_inst* serial, uint16_t val[], int count);
 SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial);
+SR_PRIV int pslab_get_ack(const struct sr_dev_inst *sdi);
+SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi);
+SR_PRIV int pslab_get_wavelength(double frequency, int table_size, int *wavelength, int *prescaler);
+SR_PRIV int pslab_set_state(const struct sr_dev_inst *sdi);
 
 #endif
