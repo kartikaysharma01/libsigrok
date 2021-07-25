@@ -25,7 +25,6 @@ SR_PRIV int pslab_pwm_generator_receive_data(int fd, int revents, void *cb_data)
 {
 	struct sr_dev_inst *sdi;
 	struct dev_context *devc;
-	struct sr_serial_dev_inst *serial;
 	int ret;
 
 	(void)fd;

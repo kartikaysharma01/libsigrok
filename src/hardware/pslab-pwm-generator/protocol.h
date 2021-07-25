@@ -31,7 +31,6 @@
 #define HIGH_FREQUENCY_LIMIT 10e7
 #define CLOCK_RATE 64e6
 #define COMMON 0x0b
-#define ADC 0x02
 #define VERSION_COMMAND 0x05
 
 /*--------WAVEGEN-----*/
@@ -43,12 +42,6 @@
 #define TUNE_SINE_OSCILLATOR 0x06
 #define SQR4 0x07
 #define MAP_REFERENCE 0x08
-#define SET_BOTH_WG 0x09
-#define SET_WAVEFORM_TYPE 0x0a
-#define SELECT_FREQ_REGISTER 0x0b
-#define DELAY_GENERATOR 0x0c
-#define SET_SINE1 0x0d
-#define SET_SINE2 0x0e
 
 /*-----digital outputs----*/
 #define DOUT 0x08
