@@ -64,11 +64,9 @@ SR_PRIV void pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t cmd[], in
 	for (i = 0; i < count; i++) {
 		bytes_written = serial_write_blocking(serial, &cmd[i], 1,
 						      serial_timeout(serial, 1));
-
 		if (bytes_written < 1)
 			sr_dbg("Failed to write command %d to device.", cmd[i]);
 	}
-
 }
 
 SR_PRIV void pslab_write_u16(struct sr_serial_dev_inst* serial, uint16_t val[], int count)
@@ -131,45 +129,24 @@ SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi)
 	if (pslab_get_wavelength(devc->frequency, 1, &devc->wavelength, &devc->prescaler) != SR_OK)
 		return SR_ERR_ARG;
 
-	sr_dbg("wavelength == %d , prescaler  == %d , frequecvy == %f ", devc->wavelength, devc->prescaler, devc->frequency);
-
-	for(l = sdi->channel_groups, i = 0; l; l = l->next, i++) {
+	for (l = sdi->channel_groups, i = 0; l; l = l->next, i++) {
 		cg = l->data;
 		cp = cg->priv;
 
-		sr_dbg("channel grp  == %s , duty cycle  == %f , phase == %f , devc->wavelength = %d", cg->name,
-		       cp->duty_cycle, cp->phase, devc->wavelength);
-
 		duty[i] = (int)(fmod(cp->duty_cycle + cp->phase, 1) * devc->wavelength);
-		sr_dbg("ln 144 : calculated duty_cycle == %d", duty[i]);
 		duty[i] = MAX(1, duty[i] - 1);
-		sr_dbg("ln 144 : calculated duty_cycle after MAX == %d", duty[i]);
 		phases[i] = (int)(fmod(cp->phase, 1) * devc->wavelength);
 		phases[i] = MAX(0, phases[i] - 1);
 	}
 
-	for(int j =0 ; j<4 ; j++) {
-		if (j ==0) {
-			sr_dbg("wavelength - 1 == %d", devc->wavelength - 1);
-			sr_dbg("duty_cycles[%d] == %d", j, duty[j]);
-			continue;
-		}
-
-		sr_dbg("phases[%d] == %d", j , phases[j]);
-		sr_dbg("duty_cycles[%d] == %d", j , duty[j]);
-	}
-	// remove this
-	prescaler_idx = std_u64_idx(g_variant_new_uint64(devc->prescaler), PRESCALERS, 4);
-	sr_dbg("_PRESCALERS.index(prescaler) | continuous == %d ", prescaler_idx | (1 << 5));
-
 	uint8_t cmd[] = {WAVEGEN, SQR4};
 	pslab_write_u8(serial, cmd, 2);
 
-	uint16_t val[] = {devc->wavelength - 1, duty[0], phases[1], duty[1], phases[2], duty[2], phases[3], duty[3]};
+	uint16_t val[] = {devc->wavelength - 1, duty[0], phases[1], duty[1],
+			  phases[2], duty[2], phases[3], duty[3]};
 	pslab_write_u16(serial, val, 8);
 
 	prescaler_idx = std_u64_idx(g_variant_new_uint64(devc->prescaler), PRESCALERS, 4);
-
 	if (prescaler_idx < 0) {
 		sr_dbg("Invalid prescaler value");
 		return SR_ERR_ARG;
@@ -188,7 +165,7 @@ SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi)
 
 SR_PRIV int pslab_get_wavelength(double frequency, int table_size, int *wavelength, int *prescaler)
 {
-	sr_info("Calculate wavelength for PWM gen, frequency = %f table_size = %d", frequency, table_size);
+	sr_dbg("Calculating wavelength, given frequency = %f", frequency);
 	int i, wl;
 
 	for (i = 0; i < NUM_DIGITAL_OUTPUT_CHANNEL; i++) {
@@ -217,11 +194,11 @@ SR_PRIV int pslab_set_state(const struct sr_dev_inst *sdi)
 	states = 0;
 	serial = sdi->conn;
 
-	for(l = sdi->channel_groups; l; l = l->next) {
+	for (l = sdi->channel_groups; l; l = l->next) {
 		cg = l->data;
 		ch = cg->channels->data;
 		cp = cg->priv;
-		sr_dbg("channel grp  == %s , duty cycle  == %f , state mask == %hhu , index = %d, state = %s", cg->name, cp->duty_cycle, cp->state_mask, ch->index, cp->state);
+		sr_dbg("channel grp %s, state = %s", cg->name, cp->state);
 
 		if(!g_strcmp0(cp->state, "LOW"))
 			sq = 0;
@@ -234,7 +211,6 @@ SR_PRIV int pslab_set_state(const struct sr_dev_inst *sdi)
 		states |= cp->state_mask | (sq << ch->index);
 	}
 
-	sr_dbg("inside set_state, states = %d", states);
 	uint8_t cmd[] = {DOUT, SET_STATE, states};
 	pslab_write_u8(serial, cmd, 3);
 

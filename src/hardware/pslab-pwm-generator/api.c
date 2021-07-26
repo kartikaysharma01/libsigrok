@@ -156,7 +156,6 @@ static int config_get(uint32_t key, GVariant **data,
 	if(!cg) {
 		switch (key) {
 		case SR_CONF_OUTPUT_FREQUENCY:
-			sr_err("config_get: get freq ln 241, %f", devc->frequency);
 			*data = g_variant_new_double(devc->frequency);
 			break;
 		default:
@@ -167,12 +166,10 @@ static int config_get(uint32_t key, GVariant **data,
 		case SR_CONF_DUTY_CYCLE:
 			cp = cg->priv;
 			*data = g_variant_new_double(cp->duty_cycle * 100);
-			sr_err("config_get: get duty cycle ln 261, = %f", cp->duty_cycle);
 			break;
 		case SR_CONF_PHASE:
 			cp = cg->priv;
 			*data = g_variant_new_double(cp->phase * 360);
-			sr_err("config_get: get phase ln 261, = %f", cp->phase);
 			break;
 		default:
 			return SR_ERR_NA;
@@ -198,7 +195,6 @@ static int config_set(uint32_t key, GVariant *data,
 		switch (key) {
 		case SR_CONF_OUTPUT_FREQUENCY:
 			devc->frequency = g_variant_get_double(data);
-			sr_err("config_set: set frequency ln 337, = %f", devc->frequency);
 			break;
 		default:
 			return SR_ERR_NA;
@@ -210,22 +206,20 @@ static int config_set(uint32_t key, GVariant *data,
 			tmp = g_variant_get_double(data);
 			tmp = tmp / 100;
 			cp->duty_cycle = tmp;
-			sr_err("config_set: set duty cycle ln 337, = %f", cp->duty_cycle);
 
 			// set state
 			if (cp->duty_cycle == 0)
 				cp->state = g_strdup("LOW");
-			else if (cp->duty_cycle < 1)
-				cp->state = g_strdup("PWM");
-			else
+			else if (cp->duty_cycle == 1)
 				cp->state = g_strdup("HIGH");
+			else
+				cp->state = g_strdup("PWM");
 			break;
 		case SR_CONF_PHASE:
 			cp = cg->priv;
 			tmp = g_variant_get_double(data);
 			tmp = tmp / 360;
 			cp->phase = tmp;
-			sr_err("GOAT: set phase ln 347, = %f", cp->phase);
 			break;
 		default:
 			return SR_ERR_NA;
@@ -239,35 +233,35 @@ static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg) {
 	if (!cg) {
 		switch (key) {
-			case SR_CONF_DEVICE_OPTIONS:
-			case SR_CONF_SCAN_OPTIONS:
-				return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
-			case SR_CONF_OUTPUT_FREQUENCY:
-				*data = std_gvar_min_max_step_array(output_freq_min_max_step);
-				break;
-			default:
-				return SR_ERR_NA;
+		case SR_CONF_DEVICE_OPTIONS:
+		case SR_CONF_SCAN_OPTIONS:
+			return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
+		case SR_CONF_OUTPUT_FREQUENCY:
+			*data = std_gvar_min_max_step_array(output_freq_min_max_step);
+			break;
+		default:
+			return SR_ERR_NA;
 		}
 	} else {
 		switch (key) {
-			case SR_CONF_DEVICE_OPTIONS:
-				*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
-				break;
-			case SR_CONF_PHASE:
-				*data = std_gvar_min_max_step_array(phase_min_max_step);
-				break;
-			case SR_CONF_DUTY_CYCLE:
-				*data = std_gvar_min_max_step_array(duty_cycle_min_max_step);
-				break;
-			default:
-				return SR_ERR_NA;
+		case SR_CONF_DEVICE_OPTIONS:
+			*data = std_gvar_array_u32(ARRAY_AND_SIZE(devopts_cg));
+			break;
+		case SR_CONF_PHASE:
+			*data = std_gvar_min_max_step_array(phase_min_max_step);
+			break;
+		case SR_CONF_DUTY_CYCLE:
+			*data = std_gvar_min_max_step_array(duty_cycle_min_max_step);
+			break;
+		default:
+			return SR_ERR_NA;
 		}
 	}
 
 	return SR_OK;
 }
 
-static int configure_channels(const struct sr_dev_inst *sdi)
+static void configure_channels(const struct sr_dev_inst *sdi)
 {
 	struct dev_context *devc;
 	const GSList *l;
@@ -281,11 +275,11 @@ static int configure_channels(const struct sr_dev_inst *sdi)
 	for (l = sdi->channels; l; l = l->next) {
 		ch = l->data;
 		if (ch->enabled) {
-			devc->enabled_digital_output = g_slist_append(devc->enabled_digital_output, ch);
+			devc->enabled_digital_output =
+				g_slist_append(devc->enabled_digital_output, ch);
 			sr_info("enabled channels: {} %s", ch->name);
 		}
 	}
-	return SR_OK;
 }
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)

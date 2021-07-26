@@ -39,7 +39,6 @@
 #define SET_SQR1 0x03
 #define SET_SQR2 0x04
 #define SET_SQRS 0x05
-#define TUNE_SINE_OSCILLATOR 0x06
 #define SQR4 0x07
 #define MAP_REFERENCE 0x08
 
