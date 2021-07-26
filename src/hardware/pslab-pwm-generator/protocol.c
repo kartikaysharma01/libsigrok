@@ -221,11 +221,11 @@ SR_PRIV int pslab_set_state(const struct sr_dev_inst *sdi)
 		cg = l->data;
 		ch = cg->channels->data;
 		cp = cg->priv;
-		sr_dbg("channel grp  == %s , duty cycle  == %f , state mask == %hhu , index = %d", cg->name, cp->duty_cycle, cp->state_mask, ch->index);
+		sr_dbg("channel grp  == %s , duty cycle  == %f , state mask == %hhu , index = %d, state = %s", cg->name, cp->duty_cycle, cp->state_mask, ch->index, cp->state);
 
-		if(g_strcmp0(cp->state, "LOW"))
+		if(!g_strcmp0(cp->state, "LOW"))
 			sq = 0;
-		else if(g_strcmp0(cp->state, "HIGH"))
+		else if(!g_strcmp0(cp->state, "HIGH"))
 			sq = 1;
 		else
 			continue;
