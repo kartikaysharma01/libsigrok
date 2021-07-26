@@ -137,18 +137,20 @@ SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi)
 		cg = l->data;
 		cp = cg->priv;
 
-		sr_dbg("channel grp  == %s , duty cycle  == %f , phase == %f ", cg->name,
-		       cp->duty_cycle, cp->phase);
+		sr_dbg("channel grp  == %s , duty cycle  == %f , phase == %f , devc->wavelength = %d", cg->name,
+		       cp->duty_cycle, cp->phase, devc->wavelength);
 
 		duty[i] = (int)fmod(cp->duty_cycle + cp->phase, 1) * devc->wavelength;
+		sr_dbg("ln 144 : calculated duty_cycle == %d", duty[i]);
 		duty[i] = MAX(1, duty[i] - 1);
+		sr_dbg("ln 144 : calculated duty_cycle after MAX == %d", duty[i]);
 		phases[i] = (int)fmod(cp->phase, 1) * devc->wavelength;
 		phases[i] = MAX(0, phases[i] - 1);
 	}
 
 	for(int j =0 ; j<4 ; j++) {
 		if (j ==0) {
-			sr_dbg("wavelength - 1 == %d", devc->wavelength);
+			sr_dbg("wavelength - 1 == %d", devc->wavelength - 1);
 			sr_dbg("duty_cycles[%d] == %d", j, duty[j]);
 			continue;
 		}
@@ -156,6 +158,8 @@ SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi)
 		sr_dbg("phases[%d] == %d", j , phases[j]);
 		sr_dbg("duty_cycles[%d] == %d", j , duty[j]);
 	}
+	// remove this
+	prescaler_idx = std_u64_idx(g_variant_new_uint16(devc->prescaler), PRESCALERS, NUM_DIGITAL_OUTPUT_CHANNEL);
 	sr_dbg("_PRESCALERS.index(prescaler) | continuous == %d ", prescaler_idx | (1 << 5));
 
 	uint8_t cmd[] = {WAVEGEN, SQR4};
