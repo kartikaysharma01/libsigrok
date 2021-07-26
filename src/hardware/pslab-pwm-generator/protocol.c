@@ -140,11 +140,11 @@ SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi)
 		sr_dbg("channel grp  == %s , duty cycle  == %f , phase == %f , devc->wavelength = %d", cg->name,
 		       cp->duty_cycle, cp->phase, devc->wavelength);
 
-		duty[i] = (int)fmod(cp->duty_cycle + cp->phase, 1) * devc->wavelength;
+		duty[i] = (int)(fmod(cp->duty_cycle + cp->phase, 1) * devc->wavelength);
 		sr_dbg("ln 144 : calculated duty_cycle == %d", duty[i]);
 		duty[i] = MAX(1, duty[i] - 1);
 		sr_dbg("ln 144 : calculated duty_cycle after MAX == %d", duty[i]);
-		phases[i] = (int)fmod(cp->phase, 1) * devc->wavelength;
+		phases[i] = (int)(fmod(cp->phase, 1) * devc->wavelength);
 		phases[i] = MAX(0, phases[i] - 1);
 	}
 
@@ -215,6 +215,7 @@ SR_PRIV int pslab_set_state(const struct sr_dev_inst *sdi)
 	int states, sq;
 
 	states = 0;
+	serial = sdi->conn;
 
 	for(l = sdi->channel_groups; l; l = l->next) {
 		cg = l->data;

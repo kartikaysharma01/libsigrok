@@ -158,6 +158,7 @@ static int config_get(uint32_t key, GVariant **data,
 		case SR_CONF_OUTPUT_FREQUENCY:
 			sr_err("config_get: get freq ln 241, %f", devc->frequency);
 			*data = g_variant_new_double(devc->frequency);
+			break;
 		default:
 			return SR_ERR_NA;
 		}
