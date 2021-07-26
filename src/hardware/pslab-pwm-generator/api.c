@@ -208,12 +208,16 @@ static int config_set(uint32_t key, GVariant *data,
 			cp->duty_cycle = tmp;
 
 			// set state
-			if (cp->duty_cycle == 0)
+			if (cp->duty_cycle == 0) {
 				cp->state = g_strdup("LOW");
-			else if (cp->duty_cycle == 1)
-				cp->state = g_strdup("HIGH");
-			else
+			} else if (cp->duty_cycle < 1) {
 				cp->state = g_strdup("PWM");
+			} else if (cp->duty_cycle == 1) {
+				cp->state = g_strdup("HIGH");
+			} else {
+				sr_err("Duty Cycle can not be greater than 100");
+				return SR_ERR_ARG;
+			}
 			break;
 		case SR_CONF_PHASE:
 			cp = cg->priv;
