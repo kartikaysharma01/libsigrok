@@ -304,7 +304,7 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 		return SR_ERR_ARG;
 	}
 
-	if (devc->frequency > HIGH_FREQUENCY_LIMIT || devc->frequency < 0) {
+	if (devc->frequency > HIGH_FREQUENCY_LIMIT || devc->frequency <= 0) {
 		sr_err("Frequency should be greater than 0 and less than 10 MHz");
 		return SR_ERR_ARG;
 	}
