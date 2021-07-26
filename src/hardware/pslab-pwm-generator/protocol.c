@@ -159,7 +159,7 @@ SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi)
 		sr_dbg("duty_cycles[%d] == %d", j , duty[j]);
 	}
 	// remove this
-	prescaler_idx = std_u64_idx(g_variant_new_uint16(devc->prescaler), PRESCALERS, NUM_DIGITAL_OUTPUT_CHANNEL);
+	prescaler_idx = std_u64_idx(g_variant_new_uint64(devc->prescaler), PRESCALERS, 4);
 	sr_dbg("_PRESCALERS.index(prescaler) | continuous == %d ", prescaler_idx | (1 << 5));
 
 	uint8_t cmd[] = {WAVEGEN, SQR4};
@@ -168,7 +168,7 @@ SR_PRIV int pslab_generate_pwm(const struct sr_dev_inst *sdi)
 	uint16_t val[] = {devc->wavelength - 1, duty[0], phases[1], duty[1], phases[2], duty[2], phases[3], duty[3]};
 	pslab_write_u16(serial, val, 8);
 
-	prescaler_idx = std_u64_idx(g_variant_new_uint16(devc->prescaler), PRESCALERS, NUM_DIGITAL_OUTPUT_CHANNEL);
+	prescaler_idx = std_u64_idx(g_variant_new_uint64(devc->prescaler), PRESCALERS, 4);
 
 	if (prescaler_idx < 0) {
 		sr_dbg("Invalid prescaler value");
