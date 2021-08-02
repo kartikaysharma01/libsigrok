@@ -32,20 +32,25 @@ static const uint32_t drvopts[] = {
 };
 
 static const uint32_t devopts[] = {
-	SR_CONF_CONTINUOUS | SR_CONF_SET,
-	SR_CONF_OUTPUT_FREQUENCY | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+	SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+	SR_CONF_LIMIT_MSEC | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+	SR_CONF_SAMPLE_INTERVAL | SR_CONF_GET | SR_CONF_SET,
+	SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+	SR_CONF_TRIGGER_PATTERN | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 };
 
 static const uint32_t devopts_cg[] = {
-	SR_CONF_DUTY_CYCLE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
-	SR_CONF_PHASE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+	SR_CONF_PATTERN_MODE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 };
 
-static const struct digital_output_channel digital_output[] = {
-	{"SQ1", 0x10},
-	{"SQ2", 0x20},
-	{"SQ3", 0x40},
-	{"SQ4", 0x80},
+static const char *digital_channels[] = {
+	"LA1",
+	"LA2",
+	"LA3",
+	"LA4",
+	"RES",
+	"EXT",
+	"FRQ",
 };
 
 static GSList *scan(struct sr_dev_driver *di, GSList *options)
@@ -56,6 +61,7 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	struct sr_dev_inst *sdi;
 	struct dev_context *devc;
 	struct sr_channel *ch;
+	struct channel_priv *cp;
 	struct sr_channel_group *cg;
 	struct channel_group_priv *cgp;
 	const char *path, *serialcomm;
@@ -112,25 +118,36 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->connection_id = device_path;
 		sdi->conn = serial;
 		sdi->version = g_strdup(version);
-		devc->frequency = 0;
-		sdi->priv = devc;
 
-		for (i = 0; i < NUM_DIGITAL_OUTPUT_CHANNEL; i++) {
-			ch = sr_channel_new(sdi, i, SR_CHANNEL_LOGIC,
-					     TRUE, digital_output[i].name);
+		for (i = 0; i < NUM_DIGITAL_INPUT_CHANNEL; i++) {
+			ch = sr_channel_new(sdi, i, SR_CHANNEL_LOGIC, TRUE, digital_channels[i]);
+			cp = g_new0(struct channel_priv, 1);
 			cg = g_new0(struct sr_channel_group, 1);
 			cgp = g_new0(struct channel_group_priv, 1);
-			cg->name = g_strdup(digital_output[i].name);
+			cp->events_in_buffer = 0;
+			cp->datatype = g_strdup("long");
+			if (!g_strcmp0(digital_channels[i], "LA1"))
+				devc->channel_one_map = ch;
+			else if (!g_strcmp0(digital_channels[i], "LA2"))
+				devc->channel_two_map = ch;
+			cg->name = g_strdup(digital_channels[i]);
 			cg->channels = g_slist_append(NULL, ch);
-			cgp->duty_cycle = 0;
-			cgp->phase = 0;
-			cgp->state = g_strdup("LOW");
-			cgp->state_mask = digital_output[i].state_mask;
+			cgp->logic_mode = LOGIC_MODES[0];
 			cg->priv = cgp;
 			sdi->channel_groups = g_slist_append(sdi->channel_groups, cg);
 		}
+		sr_sw_limits_init(&devc->limits);
+		devc->limits.limit_samples = 2500;
+		devc->limits.limit_msec = 1000;
+		devc->trigger_enabled = FALSE;
+		devc->trigger_pattern = g_strdup("disabled");
+		devc->trigger_channel = *devc->channel_one_map;
+		devc->prescaler = 0;
+		devc->trimmed = 0;
+		sdi->priv = devc;
 
 		devices = g_slist_append(devices, sdi);
+		g_free(version);
 		serial_close(serial);
 	}
 	return std_scan_complete(di, devices);
