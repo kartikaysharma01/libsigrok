@@ -153,41 +153,47 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	return std_scan_complete(di, devices);
 }
 
-static int dev_open(struct sr_dev_inst *sdi)
-{
-	(void)sdi;
-
-	/* TODO: get handle from sdi->conn and open it. */
-
-	return SR_OK;
-}
-
-static int dev_close(struct sr_dev_inst *sdi)
-{
-	(void)sdi;
-
-	/* TODO: get handle from sdi->conn and close it. */
-
-	return SR_OK;
-}
-
 static int config_get(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	int ret;
+	struct dev_context *devc;
+	struct channel_group_priv *cgp;
+	int idx;
 
-	(void)sdi;
-	(void)data;
-	(void)cg;
+	if (!sdi)
+		return SR_ERR_ARG;
 
-	ret = SR_OK;
-	switch (key) {
-	/* TODO */
-	default:
-		return SR_ERR_NA;
+	devc = sdi->priv;
+
+	if (!cg) {
+		switch (key) {
+		case SR_CONF_LIMIT_SAMPLES:
+		case SR_CONF_LIMIT_MSEC:
+			return sr_sw_limits_config_get(&devc->limits, key, data);
+		case SR_CONF_SAMPLE_INTERVAL:
+			*data = g_variant_new_uint64(devc->e2e_time);
+			break;
+		case SR_CONF_TRIGGER_SOURCE:
+			*data = g_variant_new_string(devc->trigger_channel.name);
+			break;
+		case SR_CONF_TRIGGER_PATTERN:
+			*data = g_variant_new_string(devc->trigger_pattern);
+			break;
+		default:
+			return SR_ERR_NA;
+		}
+	} else {
+		cgp = cg->priv;
+		switch (key) {
+		case SR_CONF_PATTERN_MODE:
+			*data = g_variant_new_string(cgp->logic_mode);
+			break;
+		default:
+			return SR_ERR_NA;
+
+		}
 	}
-
-	return ret;
+	return SR_OK;
 }
 
 static int config_set(uint32_t key, GVariant *data,
@@ -259,8 +265,8 @@ static struct sr_dev_driver pslab_logic_analyzer_driver_info = {
 	.config_get = config_get,
 	.config_set = config_set,
 	.config_list = config_list,
-	.dev_open = dev_open,
-	.dev_close = dev_close,
+	.dev_open = std_serial_dev_open,
+	.dev_close = std_serial_dev_close,
 	.dev_acquisition_start = dev_acquisition_start,
 	.dev_acquisition_stop = dev_acquisition_stop,
 	.context = NULL,
