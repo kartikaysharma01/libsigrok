@@ -37,10 +37,13 @@ static const uint32_t devopts[] = {
 	SR_CONF_SAMPLE_INTERVAL | SR_CONF_GET | SR_CONF_SET,
 	SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 	SR_CONF_TRIGGER_PATTERN | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+	SR_CONF_TRIGGER_MATCH | SR_CONF_LIST,
 };
 
-static const uint32_t devopts_cg[] = {
-	SR_CONF_PATTERN_MODE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+static const int32_t trigger_matches[] = {
+	SR_TRIGGER_ZERO,
+	SR_TRIGGER_FALLING,
+	SR_TRIGGER_RISING,
 };
 
 static const char *digital_channels[] = {
