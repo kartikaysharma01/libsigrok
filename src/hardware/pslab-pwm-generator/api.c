@@ -122,13 +122,12 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 		sdi->priv = devc;
 
 		for (i = 0; i < NUM_DIGITAL_OUTPUT_CHANNEL; i++) {
-			ch = sr_channel_new(sdi, i, SR_CHANNEL_LOGIC,
-					     TRUE, digital_output[i].name);
+			ch = sr_channel_new(sdi, i, SR_CHANNEL_LOGIC, TRUE, digital_output[i].name);
 			cg = g_new0(struct sr_channel_group, 1);
 			cgp = g_new0(struct channel_group_priv, 1);
 			cg->name = g_strdup(digital_output[i].name);
 			cg->channels = g_slist_append(NULL, ch);
-			cgp->duty_cycle = 0;
+			cgp->duty_cycle = 50;
 			cgp->phase = 0;
 			cgp->state = g_strdup("LOW");
 			cgp->state_mask = digital_output[i].state_mask;
