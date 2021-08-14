@@ -73,3 +73,20 @@ SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial)
 	serial_readline(serial, &buffer, &len, serial_timeout(serial, sizeof(buffer)));
 	return buffer;
 }
+
+SR_PRIV int assign_channel(const char* channel_name,
+			   struct sr_channel *target, GSList* list)
+{
+	sr_info("Assign channel %s from list to target", channel_name);
+	GSList *l;
+	struct sr_channel *ch;
+
+	for (l = list; l; l = l->next) {
+		ch = l->data;
+		if (!g_strcmp0(ch->name, channel_name)) {
+			*target = *ch;
+			return SR_OK;
+		}
+	}
+	return SR_ERR_ARG;
+}

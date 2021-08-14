@@ -83,5 +83,7 @@ SR_PRIV int pslab_logic_analyzer_receive_data(int fd, int revents, void *cb_data
 SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial);
 SR_PRIV void pslab_write_u8(struct sr_serial_dev_inst* serial, uint8_t cmd[], int count);
 SR_PRIV void pslab_write_u16(struct sr_serial_dev_inst* serial, uint16_t val[], int count);
+SR_PRIV int assign_channel(const char* channel_name,
+			   struct sr_channel *target, GSList* list);
 
 #endif

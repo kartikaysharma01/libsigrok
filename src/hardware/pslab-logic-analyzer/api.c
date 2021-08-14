@@ -160,41 +160,28 @@ static int config_get(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
-	struct channel_group_priv *cgp;
-	int idx;
+
+	(void)cg;
 
 	if (!sdi)
 		return SR_ERR_ARG;
 
 	devc = sdi->priv;
-
-	if (!cg) {
-		switch (key) {
-		case SR_CONF_LIMIT_SAMPLES:
-		case SR_CONF_LIMIT_MSEC:
-			return sr_sw_limits_config_get(&devc->limits, key, data);
-		case SR_CONF_SAMPLE_INTERVAL:
-			*data = g_variant_new_uint64(devc->e2e_time);
-			break;
-		case SR_CONF_TRIGGER_SOURCE:
-			*data = g_variant_new_string(devc->trigger_channel.name);
-			break;
-		case SR_CONF_TRIGGER_PATTERN:
-			*data = g_variant_new_string(devc->trigger_pattern);
-			break;
-		default:
-			return SR_ERR_NA;
-		}
-	} else {
-		cgp = cg->priv;
-		switch (key) {
-		case SR_CONF_PATTERN_MODE:
-			*data = g_variant_new_string(cgp->logic_mode);
-			break;
-		default:
-			return SR_ERR_NA;
-
-		}
+	switch (key) {
+	case SR_CONF_LIMIT_SAMPLES:
+	case SR_CONF_LIMIT_MSEC:
+		return sr_sw_limits_config_get(&devc->limits, key, data);
+	case SR_CONF_SAMPLE_INTERVAL:
+		*data = g_variant_new_uint64(devc->e2e_time);
+		break;
+	case SR_CONF_TRIGGER_SOURCE:
+		*data = g_variant_new_string(devc->trigger_channel.name);
+		break;
+	case SR_CONF_TRIGGER_PATTERN:
+		*data = g_variant_new_string(devc->trigger_pattern);
+		break;
+	default:
+		return SR_ERR_NA;
 	}
 	return SR_OK;
 }
@@ -202,20 +189,36 @@ static int config_get(uint32_t key, GVariant **data,
 static int config_set(uint32_t key, GVariant *data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	int ret;
+	struct dev_context *devc;
+	const char *tmp;
 
-	(void)sdi;
-	(void)data;
 	(void)cg;
 
-	ret = SR_OK;
+	if (!sdi)
+		return SR_ERR_ARG;
+
+	devc = sdi->priv;
 	switch (key) {
-	/* TODO */
+	case SR_CONF_LIMIT_SAMPLES:
+	case SR_CONF_LIMIT_MSEC:
+		return sr_sw_limits_config_set(&devc->limits, key, data);
+	case SR_CONF_SAMPLE_INTERVAL:
+		devc->e2e_time = g_variant_get_uint64(data);
+		break;
+	case SR_CONF_TRIGGER_SOURCE:
+		tmp = g_variant_get_string(data,NULL);
+		if (assign_channel(tmp, &devc->trigger_channel, sdi->channels) != SR_OK)
+			return SR_ERR_ARG;
+		break;
+	case SR_CONF_TRIGGER_PATTERN:
+		tmp = g_variant_get_string(data, NULL);
+		devc->trigger_pattern = g_strdup(tmp);
+		break;
 	default:
-		ret = SR_ERR_NA;
+		return SR_ERR_NA;
 	}
 
-	return ret;
+	return SR_OK;
 }
 
 static int config_list(uint32_t key, GVariant **data,
