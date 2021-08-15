@@ -33,7 +33,7 @@ static const uint32_t drvopts[] = {
 
 static const uint32_t devopts[] = {
 	SR_CONF_LIMIT_SAMPLES | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
-	SR_CONF_LIMIT_MSEC | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+	SR_CONF_LIMIT_MSEC | SR_CONF_GET | SR_CONF_SET,
 	SR_CONF_SAMPLE_INTERVAL | SR_CONF_GET | SR_CONF_SET,
 	SR_CONF_TRIGGER_SOURCE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 	SR_CONF_TRIGGER_PATTERN | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
@@ -54,6 +54,13 @@ static const char *digital_channels[] = {
 	"RES",
 	"EXT",
 	"FRQ",
+};
+
+static const char *trigger_patterns[] = {
+	[PSLAB_TRIGGER_PATTERN_DISABLED] = "disabled",
+	[PSLAB_TRIGGER_PATTERN_RISING] = "rising",
+	[PSLAB_TRIGGER_PATTERN_FALLING] = "falling",
+	[PSLAB_TRIGGER_PATTERN_EITHER] = "either",
 };
 
 static GSList *scan(struct sr_dev_driver *di, GSList *options)
@@ -217,42 +224,56 @@ static int config_set(uint32_t key, GVariant *data,
 	default:
 		return SR_ERR_NA;
 	}
-
 	return SR_OK;
 }
 
 static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	int ret;
+	struct dev_context *devc;
+	struct sr_channel *ch;
+	GSList *l;
+	GVariant **tmp;
+	int i;
 
-	(void)sdi;
-	(void)data;
-	(void)cg;
-
-	ret = SR_OK;
+	devc = (sdi) ? sdi->priv : NULL;
 	switch (key) {
-	/* TODO */
+	case SR_CONF_SCAN_OPTIONS:
+	case SR_CONF_DEVICE_OPTIONS:
+		if (cg)
+			return SR_ERR_NA;
+		return STD_CONFIG_LIST(key, data, sdi, cg, scanopts, drvopts, devopts);
+	case SR_CONF_LIMIT_SAMPLES:
+		*data = std_gvar_tuple_u64(MIN_EVENTS, MAX_EVENTS);
+		break;
+	case SR_CONF_TRIGGER_SOURCE:
+		if (!sdi)
+			return SR_ERR_ARG;
+
+		tmp = g_malloc(NUM_DIGITAL_INPUT_CHANNEL * sizeof(GVariant *));
+		for (l = sdi->channels, i=0; i<4; l = l->next, i++) {
+			ch = l->data;
+			tmp[i] = g_variant_new_string(ch->name);
+		}
+		*data = g_variant_new_array(G_VARIANT_TYPE_STRING, tmp, NUM_DIGITAL_INPUT_CHANNEL);
+		break;
+	case SR_CONF_TRIGGER_PATTERN:
+		*data = g_variant_new_strv(ARRAY_AND_SIZE(trigger_patterns));
+		break;
+	case SR_CONF_TRIGGER_MATCH:
+		/* TODO */
+		break;
 	default:
 		return SR_ERR_NA;
 	}
 
-	return ret;
+	return SR_OK;
 }
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 {
 	/* TODO: configure hardware, reset acquisition state, set up
 	 * callbacks and send header packet. */
-
-	(void)sdi;
-
-	return SR_OK;
-}
-
-static int dev_acquisition_stop(struct sr_dev_inst *sdi)
-{
-	/* TODO: stop acquisition. */
 
 	(void)sdi;
 
@@ -274,7 +295,7 @@ static struct sr_dev_driver pslab_logic_analyzer_driver_info = {
 	.dev_open = std_serial_dev_open,
 	.dev_close = std_serial_dev_close,
 	.dev_acquisition_start = dev_acquisition_start,
-	.dev_acquisition_stop = dev_acquisition_stop,
+	.dev_acquisition_stop = std_serial_dev_acquisition_stop,
 	.context = NULL,
 };
 SR_REGISTER_DEV_DRIVER(pslab_logic_analyzer_driver_info);

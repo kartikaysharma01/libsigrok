@@ -28,6 +28,8 @@
 #define LOG_PREFIX "pslab-logic-analyzer"
 
 #define NUM_DIGITAL_INPUT_CHANNEL 8
+#define MIN_EVENTS 10
+#define MAX_EVENTS 2500
 #define COMMON 0x0b
 #define ADC 0x02
 #define VERSION_COMMAND 0x05
@@ -40,6 +42,13 @@ static const char *LOGIC_MODES[] = {
 	"rising",
 	"four-rising",
 	"sixteen-rising",
+};
+
+enum trigger_pattern {
+    PSLAB_TRIGGER_PATTERN_DISABLED,
+    PSLAB_TRIGGER_PATTERN_FALLING,
+    PSLAB_TRIGGER_PATTERN_RISING,
+    PSLAB_TRIGGER_PATTERN_EITHER,
 };
 
 struct dev_context {
