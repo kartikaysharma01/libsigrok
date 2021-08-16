@@ -230,13 +230,11 @@ static int config_set(uint32_t key, GVariant *data,
 static int config_list(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
-	struct dev_context *devc;
 	struct sr_channel *ch;
 	GSList *l;
 	GVariant **tmp;
 	int i;
 
-	devc = (sdi) ? sdi->priv : NULL;
 	switch (key) {
 	case SR_CONF_SCAN_OPTIONS:
 	case SR_CONF_DEVICE_OPTIONS:
@@ -261,7 +259,7 @@ static int config_list(uint32_t key, GVariant **data,
 		*data = g_variant_new_strv(ARRAY_AND_SIZE(trigger_patterns));
 		break;
 	case SR_CONF_TRIGGER_MATCH:
-		/* TODO */
+		*data = std_gvar_array_i32(ARRAY_AND_SIZE(trigger_matches));
 		break;
 	default:
 		return SR_ERR_NA;
@@ -270,12 +268,70 @@ static int config_list(uint32_t key, GVariant **data,
 	return SR_OK;
 }
 
+static int configure_channels(const struct sr_dev_inst *sdi)
+{
+	struct dev_context *devc;
+	const GSList *l;
+	struct sr_channel *ch;
+
+	devc = sdi->priv;
+
+	g_slist_free(devc->enabled_channels);
+	devc->enabled_channels = NULL;
+
+	for (l = sdi->channels; l; l = l->next) {
+		ch = l->data;
+		if (ch->enabled) {
+			devc->enabled_channels = g_slist_append(devc->enabled_channels, ch);
+			sr_info("enabled channels: {} %s", ch->name);
+		}
+	}
+	return SR_OK;
+}
+
+static int check_args(GSList *channel_list, uint64_t events)
+{
+	guint channels, i;
+	struct sr_channel *ch;
+
+	channels = g_slist_length(channel_list);
+	if (channels > 4) {
+		sr_err("Number of channels to event on must be less than 4");
+		return SR_ERR_ARG;
+	}
+
+	if (events > MAX_EVENTS) {
+		sr_err("Events should be fewer than 2500");
+		return SR_ERR_ARG;
+	}
+
+	if (channels > 2) {
+		// device only allows "RES", "EXT", "FRQ" to operate in 2 channel mode
+		for (i = 0; i < channels; i++, channel_list->next) {
+			ch = channel_list->data;
+			if (ch->name)
+		}
+	}
+	return SR_OK;
+}
+
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 {
-	/* TODO: configure hardware, reset acquisition state, set up
-	 * callbacks and send header packet. */
+	int ret;
+	struct dev_context *devc;
+	struct sr_serial_dev_inst *serial;
+	configure_channels(sdi);
 
-	(void)sdi;
+	serial = sdi->conn;
+	devc = sdi->priv;
+
+	if (!devc->enabled_channels)
+		return SR_ERR;
+
+	ret = check_args(devc->enabled_channels, devc->limits.limit_samples);
+	if (ret !=SR_OK)
+		return ret;
+
 
 	return SR_OK;
 }
