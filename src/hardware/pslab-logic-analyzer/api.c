@@ -60,7 +60,6 @@ static const char *trigger_patterns[] = {
 	[PSLAB_TRIGGER_PATTERN_DISABLED] = "disabled",
 	[PSLAB_TRIGGER_PATTERN_RISING] = "rising",
 	[PSLAB_TRIGGER_PATTERN_FALLING] = "falling",
-	[PSLAB_TRIGGER_PATTERN_EITHER] = "either",
 };
 
 static GSList *scan(struct sr_dev_driver *di, GSList *options)
@@ -306,13 +305,31 @@ static int check_args(GSList *channel_list, uint64_t events)
 	}
 
 	if (channels > 2) {
-		// device only allows "RES", "EXT", "FRQ" to operate in 2 channel mode
+		// device only allows "RES", "FRQ" to event in 1 or 2 channel mode
 		for (i = 0; i < channels; i++, channel_list->next) {
 			ch = channel_list->data;
-			if (ch->name)
+			if (!(g_strcmp0(ch->name, "RES") && g_strcmp0(ch->name, "FRQ"))) {
+				sr_err("%d Channel mode does not support channel %s", channels, ch->name);
+				return SR_ERR_ARG;
+			}
 		}
 	}
 	return SR_OK;
+}
+
+static void configure_logic_analyzer(const struct sr_dev_inst *sdi)
+{
+	GSList *l;
+	struct dev_context *devc;
+	struct sr_channel *ch;
+
+	devc = sdi->priv;
+
+	devc->channel_one_map = devc->enabled_channels->data;
+	devc->channel_two_map = devc->enabled_channels->next->data;
+	sr_dbg("Chnaeel one map == %s, channel two map == %s", 	devc->channel_one_map->name, devc->channel_two_map->name);
+
+	/* TODO set trigger number depending on the no of channels */
 }
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)
@@ -332,6 +349,7 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	if (ret !=SR_OK)
 		return ret;
 
+	configure_logic_analyzer(sdi);
 
 	return SR_OK;
 }
