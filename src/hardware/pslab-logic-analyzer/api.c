@@ -58,9 +58,16 @@ static const char *digital_channels[] = {
 
 static const char *trigger_patterns[] = {
 	[PSLAB_TRIGGER_PATTERN_DISABLED] = "disabled",
-	[PSLAB_TRIGGER_PATTERN_RISING] = "rising",
 	[PSLAB_TRIGGER_PATTERN_FALLING] = "falling",
+	[PSLAB_TRIGGER_PATTERN_RISING] = "rising",
+	[PSLAB_TRIGGER_PATTERN_ANY] = "any",
+	[PSLAB_TRIGGER_PATTERN_FOUR_RISING] = "four-rising",
+	[PSLAB_TRIGGER_PATTERN_SIXTEEN_RISING] = "sixteen-rising",
 };
+
+static const int one_channel_mode_trigger[] = {0, 2, 3, 1, 4, 5};
+static const int two_channel_mode_trigger[] = {0, 3, 1};
+static const int four_channel_mode_trigger[] = {0, 1, 3};
 
 static GSList *scan(struct sr_dev_driver *di, GSList *options)
 {
@@ -317,11 +324,40 @@ static int check_args(GSList *channel_list, uint64_t events)
 	return SR_OK;
 }
 
-static void configure_logic_analyzer(const struct sr_dev_inst *sdi)
+static int configure_trigger(const struct  sr_dev_inst *sdi)
+{
+	struct dev_context *devc;
+	int idx;
+	guint channels;
+
+	devc = sdi->priv;
+	idx = std_str_idx(g_variant_new_string(devc->trigger_pattern),
+			  trigger_patterns, sizeof trigger_patterns);
+	if (idx < 0) {
+		sr_err("Invalid trigger pattern %s", devc->trigger_pattern);
+		return SR_ERR_ARG;
+	}
+	channels = g_slist_length(devc->enabled_channels);
+
+	if (channels == 1)
+		devc->trigger_pattern_number = one_channel_mode_trigger[idx];
+	else if (channels == 2 && idx > 2)
+		devc->trigger_pattern_number = two_channel_mode_trigger[idx];
+	else if (channels > 2 && idx > 2)
+		devc->trigger_pattern_number = four_channel_mode_trigger[idx];
+	else {
+		sr_err("Trigger pattern %s is not supported on %d channel mode", devc->trigger_pattern, channels);
+		return SR_ERR_ARG;
+	}
+	return SR_OK;
+}
+
+static int configure_logic_analyzer(const struct sr_dev_inst *sdi)
 {
 	GSList *l;
 	struct dev_context *devc;
 	struct sr_channel *ch;
+	int ret;
 
 	devc = sdi->priv;
 
@@ -329,7 +365,12 @@ static void configure_logic_analyzer(const struct sr_dev_inst *sdi)
 	devc->channel_two_map = devc->enabled_channels->next->data;
 	sr_dbg("Chnaeel one map == %s, channel two map == %s", 	devc->channel_one_map->name, devc->channel_two_map->name);
 
-	/* TODO set trigger number depending on the no of channels */
+	ret = configure_trigger(sdi);
+	if (ret != SR_OK)
+		return ret;
+
+	/* TODO: ret = pslab_convert_logic_trigger == get the trigger match and set is as channel logic mode*/
+	return SR_OK;
 }
 
 static int dev_acquisition_start(const struct sr_dev_inst *sdi)

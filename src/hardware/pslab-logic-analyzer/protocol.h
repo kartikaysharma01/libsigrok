@@ -36,18 +36,13 @@
 
 static const uint64_t PRESCALERS[] = {1, 8, 64, 256};
 
-static const char *LOGIC_MODES[] = {
-	"any",
-	"falling",
-	"rising",
-	"four-rising",
-	"sixteen-rising",
-};
-
 enum trigger_pattern {
     PSLAB_TRIGGER_PATTERN_DISABLED,
     PSLAB_TRIGGER_PATTERN_FALLING,
     PSLAB_TRIGGER_PATTERN_RISING,
+    PSLAB_TRIGGER_PATTERN_ANY,
+    PSLAB_TRIGGER_PATTERN_FOUR_RISING,
+    PSLAB_TRIGGER_PATTERN_SIXTEEN_RISING,
 };
 
 struct dev_context {
