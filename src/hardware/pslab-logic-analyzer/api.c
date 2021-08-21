@@ -128,30 +128,27 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 
 		sdi = g_new0(struct sr_dev_inst, 1);
 		devc = g_new0(struct dev_context, 1);
+		cg = g_new0(struct sr_channel_group, 1);
 		sdi->status = SR_ST_INACTIVE;
 		sdi->inst_type = SR_INST_SERIAL;
 		sdi->vendor = g_strdup("FOSSASIA");
 		sdi->connection_id = device_path;
 		sdi->conn = serial;
 		sdi->version = g_strdup(version);
+		cg->name = g_strdup("Digital Input");
 
 		for (i = 0; i < NUM_DIGITAL_INPUT_CHANNEL; i++) {
 			ch = sr_channel_new(sdi, i, SR_CHANNEL_LOGIC, TRUE, digital_channels[i]);
 			cp = g_new0(struct channel_priv, 1);
-			cg = g_new0(struct sr_channel_group, 1);
-			cgp = g_new0(struct channel_group_priv, 1);
 			cp->events_in_buffer = 0;
 			cp->datatype = g_strdup("long");
 			if (!g_strcmp0(digital_channels[i], "LA1"))
 				devc->channel_one_map = ch;
 			else if (!g_strcmp0(digital_channels[i], "LA2"))
 				devc->channel_two_map = ch;
-			cg->name = g_strdup(digital_channels[i]);
 			cg->channels = g_slist_append(NULL, ch);
-			cgp->logic_mode = LOGIC_MODES[0];
-			cg->priv = cgp;
-			sdi->channel_groups = g_slist_append(sdi->channel_groups, cg);
 		}
+		sdi->channel_groups = g_slist_append(NULL, cg);
 		sr_sw_limits_init(&devc->limits);
 		devc->limits.limit_samples = 2500;
 		devc->limits.limit_msec = 1000;
@@ -220,7 +217,7 @@ static int config_set(uint32_t key, GVariant *data,
 		break;
 	case SR_CONF_TRIGGER_SOURCE:
 		tmp = g_variant_get_string(data,NULL);
-		if (assign_channel(tmp, &devc->trigger_channel, sdi->channels) != SR_OK)
+		if (pslab_assign_channel(tmp, &devc->trigger_channel, sdi->channels) != SR_OK)
 			return SR_ERR_ARG;
 		break;
 	case SR_CONF_TRIGGER_PATTERN:
@@ -369,7 +366,10 @@ static int configure_logic_analyzer(const struct sr_dev_inst *sdi)
 	if (ret != SR_OK)
 		return ret;
 
-	/* TODO: ret = pslab_convert_logic_trigger == get the trigger match and set is as channel logic mode*/
+	ret = pslab_convert_logic_trigger(sdi);
+	if (ret != SR_OK)
+		return ret;
+
 	return SR_OK;
 }
 
@@ -390,7 +390,11 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	if (ret !=SR_OK)
 		return ret;
 
-	configure_logic_analyzer(sdi);
+	ret = configure_logic_analyzer(sdi);
+	if (ret !=SR_OK)
+		return ret;
+
+
 
 	return SR_OK;
 }

@@ -74,7 +74,7 @@ SR_PRIV char* pslab_get_version(struct sr_serial_dev_inst* serial)
 	return buffer;
 }
 
-SR_PRIV int assign_channel(const char* channel_name,
+SR_PRIV int pslab_assign_channel(const char* channel_name,
 			   struct sr_channel *target, GSList* list)
 {
 	sr_info("Assign channel %s from list to target", channel_name);
@@ -89,4 +89,37 @@ SR_PRIV int assign_channel(const char* channel_name,
 		}
 	}
 	return SR_ERR_ARG;
+}
+
+SR_PRIV int pslab_convert_logic_trigger(const struct sr_dev_inst *sdi)
+{
+	struct sr_trigger *trigger;
+	struct sr_trigger_stage *stage;
+	struct sr_trigger_match *match;
+	struct channel_priv *cp;
+	const GSList *l, *m;
+
+	trigger = sr_session_trigger_get(sdi->session);
+	if (!trigger)
+		return SR_ERR;
+
+	for (l = trigger->stages; l; l = l->next) {
+		stage = l->data;
+		for (m = stage->matches; m; m = m->next) {
+			match = m->data;
+			cp = match->channel->priv;
+			/* Ignore disabled channels with a trigger. */
+			if (!match->channel->enabled)
+				continue;
+
+			sr_err("ln 115: selected logic mode == %d", match->match);
+			if (match->match == SR_TRIGGER_ONE)
+				cp->logic_trigger_mode = 1;
+			else if (match->match == SR_TRIGGER_FALLING)
+				cp->logic_trigger_mode = 2;
+			else if (match->match == SR_TRIGGER_RISING)
+				cp->logic_trigger_mode = 3;
+		}
+	}
+	return SR_OK;
 }
