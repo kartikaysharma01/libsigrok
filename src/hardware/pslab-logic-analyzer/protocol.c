@@ -101,7 +101,7 @@ SR_PRIV int pslab_convert_logic_trigger(const struct sr_dev_inst *sdi)
 
 	trigger = sr_session_trigger_get(sdi->session);
 	if (!trigger)
-		return SR_ERR;
+		return SR_ERR; /* TODO might have to be SR_OK, possible bug */
 
 	for (l = trigger->stages; l; l = l->next) {
 		stage = l->data;
